@@ -1,9 +1,35 @@
 #!/bin/bash
-#Author: Zach Reed
+#Ap Signal Finish Function
+#Description:    Removes temporary files declared
+#---------------------------------------------
+#finish() {
+
+#}Author: Zach Reed
 #Description:  Matrix Script
 #Date: 4/22/2019
+#--------------------------------------------
 
+#Temporary Files in /
+temp_ex=$(mktemp /tmp/test.XXXXXXXX)
 
-dims(){
+rm "$tmpfile"
+
+#-------------------------------------------
+#Function:	Cleanup 
+#Description:    Removes temporary files
+#-------------------------------------------
+cleanup() {
+
+rm "$tmpfile"
+} 
+
+#--------------------------------------------
+#Dimensions Function
+#Description:	prints out returns from n_row()
+# 		and n_col(), respectively.
+#dims(){
 	
-}
+#}
+
+cleanup
+
