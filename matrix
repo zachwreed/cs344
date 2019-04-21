@@ -8,13 +8,14 @@
 #Temporary Files Declarations  in /tmp
 row_n=$(mktemp /tmp/row_n.XXXXXXXX)
 col_n=$(mktemp /tmp/col_n.XXXXXXXX)
+mtx_tmp=$(mktemp /tmp/col_n.XXXXXXXX)
 
 #-------------------------------------------
 #Function:      Cleanup
 #Description:    Removes temporary files
 #-------------------------------------------
 
-trap "rm -f $row_n $col_n" INT HUP TERM
+trap "rm -f $col_n $row_n" INT HUP TERM
 
 
 #--------------------------------------------
@@ -22,22 +23,37 @@ trap "rm -f $row_n $col_n" INT HUP TERM
 #Description:   prints out returns from n_row()
 #               and n_col(), respectively.
 dims(){
-	read  c_line < $1
-	col_n = 0;
+	#Get Column Size ---------
+	read  c_line<$1
+	col_n=0
         for i in $c_line
 	do
-		((col_n++))
-	done < "$1"
-	echo "Col:"
-	echo " $col_n"
+		((++col_n))
+	done
+	
+	#Get Row Size ------------
+	row_n=0
+	while read -r r_line
+	do
+		((++row_n))
+	done < "$1" 
+	
+	#Print Values -----------
+	echo "$row_n $col_n"
 }
 
 if [[ $1 == "dims" ]]
 then
+	#If No Matrix File ------------
 	if [[ $# == "1" ]]
 	then
-		echo "1 argument"
-
+		while read -r line
+		do
+			echo "$line" >> $mtx_tmp
+		done
+		dims $mtx_tmp	
+	
+	#IF Matrix File ---------------
 	elif [[ $# == "2" && -r "$2" ]]
 	then
 		echo "--------------"
