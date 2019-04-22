@@ -83,21 +83,32 @@ transpose () {
 	#Write to Temp File -----
 	col_c=0
 	col_idx=0	
-	row_c=0
 	read t_line<$tran_mtx
-	while [[ $col_c < $col_n ]]	
-	do	
+	while [[ $col_idx < $col_n ]]	
+	do
+		col_c=0
+		row_c=0	
 		for i in $t_line
 		do
-			idx=$((col_c*col_n))
-			idx=$((idx+col_idx))
-			if [[ $i == $idx ]]
+			idx=0
+			idx=$(($col_c * $col_n))
+			idx=$(($idx + $col_idx))
+
+			if [[ $row_c == $idx ]]
 			then
-				echo -n e '\t' "$i"
-				(++col_c) 
+				if [[ $col_c == 0 ]]
+				then
+				echo -n "$i"
+				
+				else
+				echo -n -e '\t' "$i" 
+				fi 
+				((++col_c)) 
 			fi
+			((++row_c))
 		done
-		(++col_idx)
+		((++col_idx))
+		printf "\n"
 	done 
 	
 	#for ((i=0 ; i<$col_n ; i++));
