@@ -13,13 +13,14 @@ tran_mtx=$(mktemp /tmp/trans_mtx.XXXXXXXX)
 col_c=$(mktemp /tmp/col_c.XXXXXXXX)
 col_idx=$(mktemp /tmp/col_idx.XXXXXXXX)
 row_c=$(mktemp /tmp/row_c.XXXXXXXX)
+idx=$(mktemp /tmp/idx.XXXXXXXX)
 
 #-------------------------------------------
 #Function:	Error Echo
 #Description:   Echo's error message to stderr
 #-------------------------------------------
 
-trap "rm -f $mtx_tmp $tran_mtx $col_n $row_n $row_c $col_c" INT HUP TERM
+trap "rm -f $mtx_tmp $tran_mtx $col_n $row_n $row_c $col_c $idx" INT HUP TERM
 
 echoerror() {
 	>&2 echo "$@"
@@ -100,12 +101,12 @@ transpose () {
 				((++col_c))
 				if [[ $col_c == 1 ]]
 				then
-				#echo -n "$i" >> $1
-				printf "%d\t" $i
-			
+					#echo -n "$i" >> $1
+					printf "%d" $i				
+
 				else
 				#echo -n -e '\t' "$i" >> $1
-				printf "%d\t" $i
+					printf "\t%d" $i
 				fi 
 			fi
 			((++row_c))
