@@ -80,10 +80,11 @@ transpose () {
 		((++row_n))
         done < "$1"
 
-	#Write to Temp File -----
+	#Loop through and echo values ----------
 	col_c=0
 	col_idx=0	
 	read t_line<$tran_mtx
+
 	while [[ $col_idx < $col_n ]]	
 	do
 		col_c=0
@@ -96,25 +97,22 @@ transpose () {
 
 			if [[ $row_c == $idx ]]
 			then
-				if [[ $col_c == 0 ]]
+				((++col_c))
+				if [[ $col_c == 1 ]]
 				then
-				echo -n "$i"
-				
+				#echo -n "$i" >> $1
+				printf "%d\t" $i
+			
 				else
-				echo -n -e '\t' "$i" 
+				#echo -n -e '\t' "$i" >> $1
+				printf "%d\t" $i
 				fi 
-				((++col_c)) 
 			fi
 			((++row_c))
 		done
-		((++col_idx))
 		printf "\n"
+		((++col_idx))
 	done 
-	
-	#for ((i=0 ; i<$col_n ; i++));
-	#do
-	#	printf '%s\n' "${t_line[0]}"
-	#done
 }
 
 
@@ -171,7 +169,36 @@ main() {
                         echoerror "Invalid arguments: " $#
                         exit 2
                 fi
-	
+
+	# Transpose Case -----------------------------------
+        elif [[ $1 == "mean" ]]
+        then
+                #If No Matrix File ------------
+                if [[ $# == "1" ]]
+                then
+                        while read -r line
+                        do
+                                echo "$line" >> $mtx_tmp
+                        done
+                        transpose $mtx_tmp
+                        exit 0
+
+                #IF Matrix File ---------------
+                elif [[ $# == "2" && -r "$2" ]]
+                then
+                        transpose $2
+                        exit 0
+
+                #If Error Case ----------------
+                else
+                        echoerror "Invalid arguments: " $#
+                        exit 2
+                fi
+
+
+
+
+		
 	#Else Function call was incorrectly typed -------
 	else 
 		echoerror "Syntax error: " $1
