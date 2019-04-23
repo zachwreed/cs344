@@ -14,13 +14,14 @@ col_c=$(mktemp /tmp/col_c.XXXXXXXX)
 col_idx=$(mktemp /tmp/col_idx.XXXXXXXX)
 row_c=$(mktemp /tmp/row_c.XXXXXXXX)
 idx=$(mktemp /tmp/idx.XXXXXXXX)
-
+arr=$(mktemp /tmp/arr.XXXXXXXX)
+sum=$(mktemp /tmp/sum.XXXXXXXX)
 #-------------------------------------------
 #Function:	Error Echo
 #Description:   Echo's error message to stderr
 #-------------------------------------------
 
-trap "rm -f $mtx_tmp $tran_mtx $col_n $row_n $row_c $col_c $idx" INT HUP TERM
+trap "rm -f $mtx_tmp $tran_mtx $col_n $row_n $row_c $col_c $idx $arr" INT HUP TERM
 
 echoerror() {
 	>&2 echo "$@"
@@ -116,6 +117,53 @@ transpose () {
 	done 
 }
 
+#------------------------------------------------------------------
+#Mean Function
+#Description: Transposes matrix by the columns and rows
+#Preconditions: $1 contains mtx_tmp from an user-input matrix or matrix file
+#------------------------------------------------------------------
+mean() {
+	#Get Column Size --------
+        read  c_line<$1
+        col_n=0
+        for i in $c_line
+        do
+                ((++col_n))
+        done
+	
+        #Get Row Size ------------
+	row_n=0
+	idx=0
+	tmp=0
+        while read -r r_line
+        do
+                for i in $r_line
+		do
+			if [[ row_n == 0 ]]
+			then
+				
+			
+			else
+				echo "arr[$idx]" >> $tmp
+				tmp=$(($tmp + $i))	
+			fi		
+			((++idx))
+		done
+		idx=0
+                ((++row_n))
+        done < "$1"
+	
+	row_c=0
+	idx=0
+	while [[ idx < col_n ]]
+	do
+		printf "%d" arr[$idx]
+		((++idx))
+	done 
+
+	# 	
+
+}
 
 #------------------------------------------------------------------
 #Main Function
@@ -171,7 +219,7 @@ main() {
                         exit 2
                 fi
 
-	# Transpose Case -----------------------------------
+	# Mean Case -----------------------------------
         elif [[ $1 == "mean" ]]
         then
                 #If No Matrix File ------------
@@ -181,13 +229,13 @@ main() {
                         do
                                 echo "$line" >> $mtx_tmp
                         done
-                        transpose $mtx_tmp
+                        mean $mtx_tmp
                         exit 0
 
                 #IF Matrix File ---------------
                 elif [[ $# == "2" && -r "$2" ]]
                 then
-                        transpose $2
+                        mean $2
                         exit 0
 
                 #If Error Case ----------------
@@ -196,7 +244,7 @@ main() {
                         exit 2
                 fi
 
-
+	#Add Case ---------------------------------------
 
 
 		

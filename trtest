@@ -1,0 +1,26 @@
+#Converts a row file ./tempinputfile into a
+# column file ./tempcolfile, then back into
+# a row file ./temprowfile<PID>
+
+inputFile="tempinputfile"
+tempRow="temprowfile"
+tempCol="tempcolfile"
+
+# Make the input row file
+echo -e "1\t2\t3\t4\t5" > $inputFile
+echo -e "1\t2\t3\t4\t5" >> $inputFile
+# Append each number onto the end of a
+# temporary column file  by cutting
+# specific columns
+cut -c 1 $inputFile > $tempCol
+cut -c 3 $inputFile >> $tempCol
+cut -c 5 $inputFile >> $tempCol
+cut -c 7 $inputFile >> $tempCol
+cut -c 9 $inputFile >> $tempCol
+
+# Convert the column file back into a row file
+cat $tempCol | tr '\n' '\t' > "$tempRow$$"
+
+# Add a newline char to the end of the row
+# file, for easier printing
+echo -e "" >> "$tempRow$$"
