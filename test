@@ -1,0 +1,22 @@
+row1="row1"
+row2="row2"
+mtx1="mtx1"
+mtx2="mtx2"
+
+while read row1 <&3 && read row2 <&4;
+do
+	echo "New Row"
+	
+	for i in row1 && j in row2
+	do
+	printf "row1: %d row2: %d" $i $j
+	done
+
+exitfunc()
+{
+    echo "this is exitfunc()"
+    exit 1
+}
+
+rm $row1 $row2 $mtx1 $mtx2
+exitfunc

@@ -1398,7 +1398,7 @@ score=15
 SECONDS=0
 ./"$cmd" add "$m1" "$m2" 1>"$outpipe" 2>"$errpipe" &
 while
-	[ $SECONDS -lt 60 ] && kill -0 $! &>/dev/null
+	[ $SECONDS -lt 30 ] && kill -0 $! &>/dev/null
 do
 	:
 done
