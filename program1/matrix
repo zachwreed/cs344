@@ -6,22 +6,90 @@
 #------------------------------
 
 
-#----------------------
+#-----------------------
 # Temporary Files
-#----------------------
+#-----------------------
+m1_data="m1_data$$"
+m2_data="m2_data$$"
 
-
-dims() {
-	echo "in dims"
+m1_colN="m1_coln$$"
+m2_colN="m2_coln$$"
+m1_rowN="m1_rown$$"
+m2_rowN="m2_rown$$"
+#-----------------------
+# Error Function Handler
+#-----------------------
+err() {
+	echo "$@" >&2
 }
 
-#----------------------
+#-----------------------
+# Get Columns  Function
+#-----------------------
+cols() {
+	read line<$1
+	local col_n=0
+	for i in $line
+	do
+		((+col_n))
+	done
+	echo "$col_n"
+}
+
+#-----------------------
+# Get Rows Function
+#-----------------------
+rows() {
+	
+}
+
+#-----------------------
+# dimension Function
+#-----------------------
+
+dims() {
+
+	rm $m1_data
+}
+
+#-----------------------
+# Add Function
+#-----------------------
+add() {
+	err "Add not implemented"
+}
+
+
+#-----------------------
 # Main Function
-#----------------------
+#-----------------------
 
 main() {
-	echo $1 ${@:2}
+	#echo $1 ${@:2}
+
+	if [[ $(type -t $1) == "function" ]]
+	then
+		if [[ $1 == "dims" || $1 == "mean" ]]
+		then
+			if [ "$#" = "1" ]
+			then
+    				cat > "$m1_data"
+				$1			
+
+			elif [ "$#" = "2" ]
+			then
+    				m1_data=$2
+				$1
+			fi
+
+		else
+			echo "handler for if not dims/mean"
+		fi
+	else
+		err "Invalid function call: $1"
+	fi
 }
 
 # "${@:2}" takes all args from > 1st arg 
-$1 "${@:2}"
+main $1 "${@:2}"
+
