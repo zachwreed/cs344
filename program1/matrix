@@ -109,7 +109,17 @@ mean() {
 # Add Function
 #-----------------------
 add() {
-	err "Add not implemented"
+	local col_m1=$(cols $m1)
+	local row_m1=$(rows $m1)
+
+	local col_m2=$(cols $m2)
+	local row_m2=$(rows $m2)
+
+	if [[ $col_m1 != $col_m2 || $row_m1 != $row_m2 ]]
+	then
+		err "Invalid matrices sizes"
+		exit 2
+	fi
 }
 
 
@@ -127,22 +137,34 @@ main() {
 			if [ "$#" = "1" ]
 			then
     				cat > "$m1"
+				#rm $m1
 
 			elif [ "$#" = "2" ]
 			then
     				m1=$2
 
-			elif [ "$#" > 2 ]
+			elif [ "$#" > "2" ]
 			then 
 				err "Invalid arguments: " $#
 				exit 2
 			fi
 		
 			$1
+			rm $m1
 			exit 0
 
+		# "mul"or "add" ----------------------------------------
 		else
-			echo "handler for if not dims/mean"
+			if [ "$#" = "3" ]
+			then
+				m1=$2
+				m2=$3
+				$1
+				exit 0
+		
+			else 
+				err "Invalid matrices" $#
+			fi
 		fi
 	else
 		err "Invalid function call: $1"
