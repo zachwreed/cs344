@@ -9,13 +9,12 @@
 #-----------------------
 # Temporary Files
 #-----------------------
-m1="m1$$"
-m2="m2$$"
+m1="m1_$$"
+m2="m2_$$"
+m3="m3_$$"
+m4="m4_$$"
 
-m1_colN="m1_coln$$"
-m2_colN="m2_coln$$"
-m1_rowN="m1_rown$$"
-m2_rowN="m2_rown$$"
+trap "rm -f $m1 $m2 $m3 $m4; echo 'SIGINT received: Deleting temp files..'; exit 1" INT
 #-----------------------
 # Error Function Handler
 #-----------------------
@@ -56,8 +55,24 @@ dims() {
 	#cols $1 $m1
 	local col_n=$(cols $m1)
 	local row_n=$(rows $m1)
-	echo "$col_n $row_n"
+	echo "$row_n $col_n"
 }
+
+#-----------------------
+# mean Function
+#-----------------------
+transpose() {
+	local col_n=$(cols $m1)
+	local row_n=$(rows $m1)	
+
+	for ((i=1 ; i<=$col_n ; i++))
+	do 
+		line=$(cat $m1 | cut -f $i -d$'\t' | tr "\n" "\t")
+		line=${line%?}
+		echo "$line"
+	done	
+}
+
 
 #-----------------------
 # Add Function
@@ -76,18 +91,24 @@ main() {
 
 	if [[ $(type -t $1) == "function" ]]
 	then
-		if [[ $1 == "dims" || $1 == "mean" ]]
+		if [[ $1 == "dims" || $1 == "mean" || $1 == "transpose" ]]
 		then
 			if [ "$#" = "1" ]
 			then
-    				cat > "$m1"			
+    				cat > "$m1"
 
 			elif [ "$#" = "2" ]
 			then
     				m1=$2
-				#cat m1
+
+			elif [ "$#" > 2 ]
+			then 
+				err "Invalid arguments: " $#
+				exit 2
 			fi
+		
 			$1
+			exit 0
 
 		else
 			echo "handler for if not dims/mean"
