@@ -59,7 +59,7 @@ dims() {
 }
 
 #-----------------------
-# mean Function
+# transpose Function
 #-----------------------
 transpose() {
 	local col_n=$(cols $m1)
@@ -71,6 +71,37 @@ transpose() {
 		line=${line%?}
 		echo "$line"
 	done	
+}
+
+#-----------------------
+# mean Function
+#-----------------------
+mean() {
+        local col_n=$(cols $m1)
+        local row_n=$(rows $m1)
+	local sum=0
+	local mean=0
+
+	for ((i=1 ; i<=$col_n ; i++))
+	do
+		line=$(cat $m1 | cut -f $i -d$'\t' | tr "\n" "\t")
+		for j in $line
+		do
+			sum=$(($j + $sum))
+		done
+		mean=$((($sum+($row_n/2)*( ($sum>0)*2-1))/$row_n))
+		if [[ $i == 1 ]]               
+                then
+                	printf "%d" $mean
+
+                else
+                	printf "\t%d" $mean
+                fi
+
+		mean=0
+		sum=0
+	done
+	printf "\n"
 }
 
 
