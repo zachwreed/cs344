@@ -31,17 +31,17 @@ while getopts :hdueitmalgx flag; do
 	case $flag in
 		h)
 			echo "To use grading script, type ./p1gradingscript -listOfFlags yourFileName"
-			echo -en "The flags are as follows:\n
-			h - will list the proper syntax and list of flags, then exits the code\n
+			echo -en "The flags are as follows:
+      h - will list the proper syntax and list of flags, then exits the code.
       d - enter debug mode. Failures will send outpipe or errpipe to log. Matrices
           will be saved.
       u - enters unit testing mode. Grading script will exit after first error.
-			e - The flag for error tests\n
-			i - The flag for dims tests\n
-			t - The flag for tranpose tests\n
-			m - The flag for mean tests\n
-			a - The flag for add tests\n
-			l - The flag for multiply tests\n"
+      e - The flag for error tests.
+      i - The flag for dims tests.
+      t - The flag for tranpose tests.
+      m - The flag for mean tests.
+      a - The flag for add tests.
+      l - The flag for multiply tests.\n"
 			exit 11
 			;;
 		d)
@@ -732,7 +732,6 @@ echo "0 * M == 0? (5pt):" | tee -a "$log"
 message="Output result does not match known result"
 expect_success 5 120 "./$cmd multiply $m1 $m2" "$message" "$m3"
 ((points+=score))
-fi
 
 
 
@@ -818,6 +817,7 @@ echo "(hardcoded) A * B == C? (20pt):" | tee -a "$log"
 message="Output result does not match known result"
 expect_success 20 180 "./$cmd multiply $m1 $m2" "$message" "$m3"
 ((points+=score))
+fi
 
 
 echo "Total: $points" >&2
