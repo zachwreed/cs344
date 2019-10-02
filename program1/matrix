@@ -56,7 +56,6 @@ dims() {
 	local col_n=$(cols $m1)
 	local row_n=$(rows $m1)
 	echo "$row_n $col_n"
-	rm $m1
 }
 
 #-----------------------
@@ -135,21 +134,23 @@ main() {
 	then
 		if [[ $1 == "dims" || $1 == "mean" || $1 == "transpose" ]]
 		then
-			if [ "$#" = "1" ]
+			if [[ $# == "1" ]]
 			then
     				cat > "$m1"
+				$1
+				rm $m1
+				exit 0
 
-			elif [ "$#" = "2" ]
+			elif [[ $# == "2" && -r "$2" ]]
 			then
     				m1=$2
+				$1
+				exit 0
 
 			else 
 				err "Invalid arguments: " $#
 				exit 2
 			fi
-		
-			$1
-			exit 0
 
 		# "mul"or "add" ----------------------------------------
 		else
@@ -162,10 +163,12 @@ main() {
 		
 			else 
 				err "Invalid matrices" $#
+				exit 2
 			fi
 		fi
 	else
 		err "Invalid function call: $1"
+		exit 2
 	fi
 }
 
