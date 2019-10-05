@@ -13,6 +13,7 @@ m1="m1_$$"
 m2="m2_$$"
 m3="m3_$$"
 m4="m4_$$"
+m5="m5_$$"
 
 trap "rm -f $m1 $m2 $m3 $m4; echo 'SIGINT received: Deleting temp files..'; exit 1" INT
 #-----------------------
@@ -111,7 +112,6 @@ mean() {
 add() {
 	local col_m1=$(cols $m1)
 	local row_m1=$(rows $m1)
-
 	local col_m2=$(cols $m2)
 	local row_m2=$(rows $m2)
 
@@ -120,6 +120,38 @@ add() {
 		err "Invalid matrices sizes"
 		exit 2
 	fi
+
+	for ((i=1 ; i<=$col_m1 ; i++))
+	do
+		cutM1=$(cat $m1 | cut -f $i -d$'\t' | tr "\n" "\t")
+		cutM2=$(cat $m2 | cut -f $i -d$'\t' | tr "\n" "\t")
+		echo "$cutM1" > $m3
+		echo "$cutM2" >> $m3
+		#cat $m3
+		
+		for((j=1 ; j<=$row_m1 ; j++))
+		do 
+			cutM3=$(cat $m3 | cut -f $j -d$'\t' | tr "\n" "\t")
+			echo "$cutM3" > $m4
+			read line<$m4
+
+			local add=0
+			for k in $line
+			do	
+				add=$(($add + $k))	
+			done
+			echo -e -n "$add\t" >> $m5
+		done
+		echo "" >> $m5
+	done
+
+	for ((i=1 ; i<=$row_m1 ; i++))
+        do
+                line=$(cat $m5 | cut -f $i -d$'\t' | tr "\n" "\t")
+                line=${line%?}
+                echo "$line"
+        done
+	rm $m3 $m4 $m5
 }
 
 
