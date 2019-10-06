@@ -220,6 +220,10 @@ expect_error(){
 expect_success(){
     ((tests+=1))
     score="$1"
+    if [ $# -eq 4 ]
+    then
+        expected="$(cat)"
+    fi
     timeout --foreground -s9 "$2" bash -c "$3" >"$outpipe" 2>"$errpipe"
     result=$?
     if
@@ -235,7 +239,7 @@ expect_success(){
     	fi
       if [ $# -eq 4 ]
       then
-    	  cmp -s "$outpipe"
+    	  cmp -s "$outpipe" <<< "$expected"
       else
     	  cmp -s "$outpipe" "$5"
       fi

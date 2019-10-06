@@ -14,8 +14,8 @@ m2="m2_$$"
 m3="m3_$$"
 m4="m4_$$"
 m5="m5_$$"
-
-trap "rm -f $m1 $m2 $m3 $m4; echo 'SIGINT received: Deleting temp files..'; exit 1" INT
+m6="m5_$$"
+trap "rm -f $m1 $m2 $m3 $m4 $m5 $m6; echo 'SIGINT received: Deleting temp files..'; exit 1" INT
 #-----------------------
 # Error Function Handler
 #-----------------------
@@ -146,11 +146,76 @@ add() {
 	done
 
 	for ((i=1 ; i<=$row_m1 ; i++))
-        do
+	do
                 line=$(cat $m5 | cut -f $i -d$'\t' | tr "\n" "\t")
                 line=${line%?}
                 echo "$line"
         done
+	rm $m3 $m4 $m5
+}
+
+#-----------------------
+# Multiply Function
+#-----------------------
+multiply() {
+        local col_m1=$(cols $m1)
+        local row_m1=$(rows $m1)
+        local col_m2=$(cols $m2)
+        local row_m2=$(rows $m2)
+	
+        if [[ $col_m1 != $row_m2  ]]
+        then
+                err "Invalid matrices sizes"
+                exit 2
+        fi
+
+	for ((i=1 ; i<=$col_m2 ; i++))
+	do
+        	cutM2=$(cat $m2 | cut -f $i -d$'\t' | tr "\n" "\t")
+		echo "$cutM2" >> $m3
+	done
+
+	while read -r lineM1
+	do
+		local count=1
+        	while read -r lineM3
+        	do
+			echo "$lineM1" > $m4
+			local add=0
+			echo "$lineM3" >> $m4
+			
+			for (( i=1 ; i<=$col_m1 ; i++ ))
+			do
+              		cutM4=$(cat $m4 | cut -f $i -d$'\t' | tr "\n" "\t")
+       			echo "$cutM4" > $m5
+			
+			read line<$m5
+			local mul=0
+			local res=0
+			local idx=0
+
+			for k in $line
+			do
+				if [[ $idx == 0 ]]
+				then
+					mul=$k
+				else
+					res=$(expr "$mul" '*' "$k")
+					add=$(($add + $res))	
+				fi
+				((++idx))
+			done
+			done
+			if [[ $count == $col_m2 ]]
+			then
+				echo "$add"
+
+			else 
+				echo -n -e "$add\t"
+			fi
+			((++count)) 
+		done<"$m3" 
+	done<"$m1"
 	rm $m3 $m4 $m5
 }
 
