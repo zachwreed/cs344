@@ -14,8 +14,9 @@ m2="m2_$$"
 m3="m3_$$"
 m4="m4_$$"
 m5="m5_$$"
-m6="m5_$$"
-trap "rm -f $m1 $m2 $m3 $m4 $m5 $m6; echo 'SIGINT received: Deleting temp files..'; exit 1" INT
+
+trap "rm -f $m1 $m2 $m3 $m4 $m5; echo 'SIGINT received: Deleting temp files..'; exit 1" INT
+
 #-----------------------
 # Error Function Handler
 #-----------------------
@@ -24,7 +25,7 @@ err() {
 }
 
 #-----------------------
-# Get Columns  Function
+# Get Columns Function
 #-----------------------
 cols() {
 	read line<$1
@@ -53,7 +54,6 @@ rows() {
 #-----------------------
 
 dims() {
-	#cols $1 $m1
 	local col_n=$(cols $m1)
 	local row_n=$(rows $m1)
 	echo "$row_n $col_n"
@@ -66,8 +66,10 @@ transpose() {
 	local col_n=$(cols $m1)
 	local row_n=$(rows $m1)	
 
+	#for each column in matrix
 	for ((i=1 ; i<=$col_n ; i++))
 	do 
+		#cut each column and convert to row without last tab
 		line=$(cat $m1 | cut -f $i -d$'\t' | tr "\n" "\t")
 		line=${line%?}
 		echo "$line"
@@ -82,15 +84,21 @@ mean() {
         local row_n=$(rows $m1)
 	local sum=0
 	local mean=0
-
+	
+	#for each column in matrix
 	for ((i=1 ; i<=$col_n ; i++))
 	do
+		#cut each column to a row and sum line
 		line=$(cat $m1 | cut -f $i -d$'\t' | tr "\n" "\t")
 		for j in $line
 		do
 			sum=$(($j + $sum))
 		done
+
+		#calculate mean per rounding instructions
 		mean=$((($sum+($row_n/2)*( ($sum>0)*2-1))/$row_n))
+		
+		#print results
 		if [[ $i == 1 ]]               
                 then
                 	printf "%d" $mean
@@ -110,41 +118,48 @@ mean() {
 # Add Function
 #-----------------------
 add() {
+	#get column and row size for m1 & m2
 	local col_m1=$(cols $m1)
 	local row_m1=$(rows $m1)
 	local col_m2=$(cols $m2)
 	local row_m2=$(rows $m2)
 
+	# Check if matrices are multipliable 
 	if [[ $col_m1 != $col_m2 || $row_m1 != $row_m2 ]]
 	then
 		err "Invalid matrices sizes"
 		exit 2
 	fi
 
+	# For each column in m1 & m2
 	for ((i=1 ; i<=$col_m1 ; i++))
 	do
+		#cut m1[x] & m2[x] columns to m3
 		cutM1=$(cat $m1 | cut -f $i -d$'\t' | tr "\n" "\t")
 		cutM2=$(cat $m2 | cut -f $i -d$'\t' | tr "\n" "\t")
 		echo "$cutM1" > $m3
 		echo "$cutM2" >> $m3
-		#cat $m3
-		
+	
+		# cut m3 col so m1[x][y] and m2[x][y] are on same line	
 		for((j=1 ; j<=$row_m1 ; j++))
 		do 
 			cutM3=$(cat $m3 | cut -f $j -d$'\t' | tr "\n" "\t")
 			echo "$cutM3" > $m4
+			
+			# add m1[x][y] + m2[x][y] from m4
 			read line<$m4
-
 			local add=0
 			for k in $line
 			do	
 				add=$(($add + $k))	
 			done
+			# echo out result for each element to $m5
 			echo -e -n "$add\t" >> $m5
 		done
 		echo "" >> $m5
 	done
 
+	#print m5
 	for ((i=1 ; i<=$row_m1 ; i++))
 	do
                 line=$(cat $m5 | cut -f $i -d$'\t' | tr "\n" "\t")
@@ -162,50 +177,59 @@ multiply() {
         local row_m1=$(rows $m1)
         local col_m2=$(cols $m2)
         local row_m2=$(rows $m2)
-	
+	local add=0, count=0, mul=0, res=0, idx=0
+
+	# Check MxN and NxP
         if [[ $col_m1 != $row_m2  ]]
         then
                 err "Invalid matrices sizes"
                 exit 2
         fi
 
+	# For each P in NxP cut P to m3
 	for ((i=1 ; i<=$col_m2 ; i++))
 	do
         	cutM2=$(cat $m2 | cut -f $i -d$'\t' | tr "\n" "\t")
 		echo "$cutM2" >> $m3
 	done
 
+	# For each M in MxN
 	while read -r lineM1
 	do
-		local count=1
+		count=1
+		# For each P in NxP
         	while read -r lineM3
         	do
+			# Cut M[x] P[y] to m4
 			echo "$lineM1" > $m4
-			local add=0
+			add=0
 			echo "$lineM3" >> $m4
 			
+			# cut M[x][z]  P[y][z] to m5
 			for (( i=1 ; i<=$col_m1 ; i++ ))
 			do
-              		cutM4=$(cat $m4 | cut -f $i -d$'\t' | tr "\n" "\t")
-       			echo "$cutM4" > $m5
+              			cutM4=$(cat $m4 | cut -f $i -d$'\t' | tr "\n" "\t")
+       				echo "$cutM4" > $m5
 			
-			read line<$m5
-			local mul=0
-			local res=0
-			local idx=0
+				read line<$m5
+				mul=0
+				res=0
+				idx=0
 
-			for k in $line
-			do
-				if [[ $idx == 0 ]]
-				then
-					mul=$k
-				else
-					res=$(expr "$mul" '*' "$k")
-					add=$(($add + $res))	
-				fi
-				((++idx))
+				# multiply each M[x][z] * P[y][z] and add to line
+				for k in $line
+				do
+					if [[ $idx == 0 ]]
+					then
+						mul=$k
+					else
+						res=$(expr "$mul" '*' "$k")
+						add=$(($add + $res))	
+					fi
+					((++idx))
+				done
 			done
-			done
+			# print out line results
 			if [[ $count == $col_m2 ]]
 			then
 				echo "$add"
