@@ -19,6 +19,7 @@ trap "rm -f $m1 $m2 $m3 $m4 $m5; echo 'SIGINT received: Deleting temp files..'; 
 
 #-----------------------
 # Error Function Handler
+# sends args to stderr
 #-----------------------
 err() {
 	echo "$@" >&2
@@ -26,6 +27,8 @@ err() {
 
 #-----------------------
 # Get Columns Function
+# Preconditions: $1 contains valid matrix
+# Postconditions: $col_n echo out
 #-----------------------
 cols() {
 	read line<$1
@@ -39,6 +42,8 @@ cols() {
 
 #-----------------------
 # Get Rows Function
+# Preconditions: $1 contains valid matrix
+# Postconditions: $col_n echo out
 #-----------------------
 rows() {
 	local row_n=0
@@ -51,6 +56,8 @@ rows() {
 
 #-----------------------
 # dimension Function
+# Preconditions: $m1 contains valid matrix
+# Postconditions: cols & rows return echo out
 #-----------------------
 
 dims() {
@@ -61,6 +68,8 @@ dims() {
 
 #-----------------------
 # transpose Function
+# Preconditions: $m1 contains valid matrix
+# Postconditions: $line echo out
 #-----------------------
 transpose() {
 	local col_n=$(cols $m1)
@@ -78,6 +87,8 @@ transpose() {
 
 #-----------------------
 # mean Function
+# Preconditions: $m1 contains valid matrix
+# Postconditions: $mean echo out
 #-----------------------
 mean() {
         local col_n=$(cols $m1)
@@ -116,6 +127,8 @@ mean() {
 
 #-----------------------
 # Add Function
+# Preconditions: $m1, $m2 contains valid matrix
+# Postconditions: $add matrix echo out
 #-----------------------
 add() {
 	#get column and row size for m1 & m2
@@ -171,6 +184,8 @@ add() {
 
 #-----------------------
 # Multiply Function
+# Preconditions: $m1, $m2 contains valid matrix
+# Postconditions: $add echo out
 #-----------------------
 multiply() {
         local col_m1=$(cols $m1)
