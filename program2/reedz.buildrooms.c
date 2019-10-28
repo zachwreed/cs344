@@ -27,9 +27,9 @@ struct room{
 
 
 struct room* rooms[ROOMS_N];
-int room_bool_n[ROOMS_LN];
+int room_bool_n[ROOMS_LN];          // bool when gen rooms for if room used
 int room_bool_t[ROOMS_T];
-char* room_names[ROOMS_LN] = { "Eastmarch", "Falkreath", "Haafingar", "Hjaalmarch", "The_Pale", "The_Reach", "The_Rift", "Whiterun", "Winterhold", "Oblivion" };
+char* room_names[ROOMS_LN] = { "Eastmar", "Falkreat", "Haafing", "Hjaalm", "ThePale", "TheReach", "TheRift", "Whiterun", "Wintold", "Oblivion" };
 char* room_types[ROOMS_T] = { "START_ROOM", "END_ROOM", "MID_ROOM" };
 char dir_name[11] = "reedz.rooms";  // name of directory without pID
 char* dir_str;                      // stores dir_name + pID
@@ -46,19 +46,17 @@ void gen_initializer() {
     int i; for ( i = 0; i < ROOMS_T; i++) {
         room_bool_t[i] = -1;
     }
-    
+
     // initialize room bool to false
     int j; for ( j = 0; j < ROOMS_LN; j++) {
         room_bool_n[j] = 0;
     }
-    
+
     // initialize room array with empty room
-    
     int k; for ( k = 0; k < ROOMS_N; k++) {
         rooms[k] = (struct room *)malloc(sizeof(struct room));
         rooms[k]->connect_n = 0;
     }
-    
 }
 
 /*****************************************************
@@ -71,20 +69,20 @@ void make_room_file(struct room* roomf) {
     int room_name_len = strlen(roomf->name);
     room_name_len += 5; // for "_room"
     char* room_dir = (char *)malloc(sizeof(char) * (dir_str_len + room_name_len));
-    
+
     // copy directory and name for file
     strcpy(room_dir, dir_str);
     strcat(room_dir, "/");
     strcat(room_dir, roomf->name);
     strcat(room_dir, "_room");
-    
+
     // write file room contents
     FILE *room_file = fopen(room_dir, "w+");
     fprintf(room_file, "ROOM NAME: %s\n", roomf->name);
     int i; for ( i = 0; i < roomf->connect_n; i++) {
         fprintf(room_file, "CONNECTION %d: %s\n", i + 1, roomf->connections[i]->name);
     }
-    fprintf(room_file, "ROOM TYPE: %s\n", roomf->type);	
+    fprintf(room_file, "ROOM TYPE: %s\n", roomf->type);
     fclose(room_file);
 }
 
@@ -100,14 +98,16 @@ void make_dir() {
     if (pid > 9999) {
         pid_len = 6;
     }
-    // Put pID in string
+    // Write formatted data to string
     char* pid_str = (char *)malloc(sizeof(char) * pid_len);
     sprintf(pid_str, ".%d", pid);
-    
+
+    // Add pID string to directory name
     dir_str = (char *)malloc(sizeof(char) * (dir_str_len + pid_len));
     strcat(dir_str, dir_name);
     strcat(dir_str, pid_str);
     dir_str_len += pid_len;
+    // make directory (string, chmod mode)
     int result = mkdir(dir_str, 0755);
 }
 
@@ -117,13 +117,11 @@ void make_dir() {
  ** Postconditions: rooms->names added, room_bool_n[0-max] = 1
  *****************************************************/
 void gen_room_names() {
-    
     // Generate rooms with names
     int idx = 0;
     int r;
     while (idx < ROOMS_N) {
         r = rand() % ROOMS_LN;
-        
         // if random room name hasn't been used
         if (room_bool_n[r] == 0) {
             rooms[idx]->name = room_names[r];
@@ -139,7 +137,6 @@ void gen_room_names() {
  ** Postconditions: rooms->names added, room_bool_n[0-max] = 1
  *****************************************************/
 void gen_room_types() {
-    
     // Generate rooms with types
     int idx = 0;
     int start;
@@ -147,7 +144,7 @@ void gen_room_types() {
     // Generate Start Module
     start = rand() % ROOMS_N;
     rooms[start]->type = room_types[0];
-    
+
     // Generate End Module
     end = rand() % ROOMS_N;
     while(1) {
@@ -157,7 +154,7 @@ void gen_room_types() {
         }
         end = rand() % ROOMS_N;
     }
-    
+
     // Generate rest of Middle Modules
     while (idx < ROOMS_N) {
         if (idx != start && idx != end) {
@@ -165,7 +162,6 @@ void gen_room_types() {
         }
         idx++;
     }
-    
 }
 
 /*****************************************************
@@ -222,7 +218,7 @@ void gen_room_connections() {
     while(is_graph_full() == 0) {
         rc1 = rand() % ROOMS_N;
         rc2 = rand() % ROOMS_N;
-        
+
         // if not same index --------------------
         if (rc1 != rc2) {
             // if room connect 1 in range -------
@@ -235,7 +231,6 @@ void gen_room_connections() {
                 }
             }
         }
-        
     }
 }
 
@@ -249,12 +244,12 @@ void gen_room_files() {
         make_room_file(rooms[i]);
     }
 }
-    
+
 int main() {
     // seed random generator
     time_t t;
     srand((unsigned)time(&t));
-    
+
     // make directory and files -----------
     make_dir();
     gen_initializer();

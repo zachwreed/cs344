@@ -39,7 +39,7 @@ struct room* g_rooms[100];
 int rn_steps;
 int rooms_idx;                  // used for adding rooms
 char* gtime;
-char* room_names[ROOMS_LN] = { "Eastmarch", "Falkreath", "Haafingar", "Hjaalmarch", "The_Pale", "The_Reach", "The_Rift", "Whiterun", "Winterhold", "Oblivion" };
+char* room_names[ROOMS_LN] = { "Eastmar", "Falkreat", "Haafing", "Hjaalm", "ThePale", "TheReach", "TheRift", "Whiterun", "Wintold", "Oblivion" };
 char* room_types[ROOMS_T] = { "START_ROOM", "END_ROOM", "MID_ROOM" };
 
 /*****************************************************
@@ -48,8 +48,8 @@ char* room_types[ROOMS_T] = { "START_ROOM", "END_ROOM", "MID_ROOM" };
  ** Postconditions: array is initiallized
  *****************************************************/
 void constructor() {
-    memset(working_dir, '\0', sizeof(working_dir));
-    
+    memset(working_dir, '\0', sizeof(working_dir)); // set block of memory to value
+
     rn_steps = 0;
     int k;
     for ( k = 0; k < ROOMS_N; k++) {
@@ -159,13 +159,13 @@ void add_room(char *file_name, int nidx) {
         rooms[rooms_idx]->connect_n++;
         memset(room_line, '\0', sizeof(room_line));
     }
-    
+
     // get type from file
     int tidx = is_type(room_line);
     if (tidx > -1) {
         rooms[rooms_idx]->type = room_types[tidx];
     }
-    
+
     fclose(room);
     rooms_idx++;
 }
@@ -196,11 +196,12 @@ void add_room_connections(char *file_name, int nidx, int ridx) {
  ** Postconditions: reads rooms from directory for writing
  *****************************************************/
 void get_rooms(char* newest_dir) {
+  // dirent = directory stream
     struct dirent* rooms_in_dir;
     DIR* rooms_to_check = opendir(newest_dir);
     char new_file[256];
     int index;
-    
+
     if (rooms_to_check > 0) {
         while ((rooms_in_dir = readdir(rooms_to_check))) {
             index = is_room(rooms_in_dir->d_name);
@@ -263,9 +264,7 @@ void g_room_gen() {
  ** Preconditions:
  ** Postconditions: gtime is updated with current time
  *****************************************************/
-void* get_time() {
-    pthread_mutex_lock(&mutex);
-    
+void get_time() {
     //size_t wdlen = sizeof(working_dir);
     //size_t ctlen = 16;
     //char* time_file = (char *) malloc(sizeof(char) * (wdlen + ctlen));
@@ -280,10 +279,9 @@ void* get_time() {
             strcpy(line_cpy, line);
         }
         printf("\n%s", line_cpy);
-        
+
     }
     fclose(file);
-    pthread_mutex_unlock(&mutex);
 }
 
 /*****************************************************
@@ -291,24 +289,24 @@ void* get_time() {
  ** Preconditions: none
  ** Postconditions: currentTime.txt in . directory file appended with time if exists
  *****************************************************/
-void write_time() {
-    
+void* write_time() {
     pthread_mutex_lock(&mutex);
-    
+
     char str[80];
     size_t maxsize = 256;
     time_t rawtime;
     const struct tm *time_p;
-    
+
     time(&rawtime);
     time_p = localtime(&rawtime);
-    
+
     strftime(str, maxsize, "%I:%M%p, %A, %B %d, %Y\n", time_p);
     FILE *file = fopen("currentTime.txt", "a");
     fputs(str, file);
     fclose(file);
-    
+
     pthread_mutex_unlock(&mutex);
+    return NULL;
 }
 
 
@@ -318,20 +316,20 @@ void write_time() {
  ** Postconditions: game exits
  *****************************************************/
 void play_game() {
-    
+
     // Initialize getline variables
     char *line;
     size_t line_size = 256;
     size_t buff_char;
     line = (char *)malloc(sizeof(char) * line_size);
-    
+
     // prepare game array
     g_room_gen();
     struct room* current_room;
     current_room = g_rooms[0];
     int idx = 1;
     int gbool = 0;
-    
+
     // while game is being played ---------------------------------------------
     while(gbool == 0) {
         // if current room is end room ----------------------------
@@ -355,16 +353,16 @@ void play_game() {
                 printf("%s, ", current_room->connections[i]->name);
             }
             printf("%s.", current_room->connections[i++]->name);
-            
+
             // Where To? loop -------------------------------------
             while(1) {
                 printf("\nWHERE TO? >");
                 buff_char = getline(&line, &line_size, stdin);
-                
+
                 int is_r = is_room_arr(line);
                 if (is_r != -1) {
                     int is_rc = is_room_connect(current_room, is_r);
-                    
+
                     if(is_rc != -1) {
                         current_room = rooms[is_r];
                         g_rooms[idx] = current_room;
@@ -379,12 +377,12 @@ void play_game() {
                 }
                 else {
                     if (strstr(line, "time")) {
-                        write_time();
-                        pthread_t thread;
-                        pthread_mutex_lock(&mutex);
-                        int res = pthread_create(&thread, NULL, get_time, NULL);
-                        pthread_mutex_unlock(&mutex);
+                        int res = pthread_create(&mutex, NULL, write_time, NULL);
                         res = pthread_join(thread, NULL);
+
+                        if (res == 0) {
+                          get_time()
+                        }
                     }
                     else {
                         printf("\nHUH? I DON'T UNDERSTAND THAT ROOM. TRY AGAIN.\n");
@@ -400,26 +398,26 @@ void play_game() {
 int main() {
     constructor();
     rooms_idx = 0;
-    
+
     char prefix_dir[32] = "reedz.rooms.";
-    char newest_dir[256];
+    char newest_dir[256];     // holds newer time directory
     int newest_dir_time = -1;
     memset(newest_dir, '\0', sizeof(newest_dir));
     DIR* dir_to_check;
     struct dirent* file_in_dir;
     struct stat dir_attr;
-    
+
     dir_to_check = opendir(".");
-    
+
     // if directory opens
     if (dir_to_check > 0) {
-        // while file in directory
+        // while room files in directory
         while ((file_in_dir = readdir(dir_to_check)) != NULL) {
             // if file name = prefix directory characters
             if(strstr(file_in_dir->d_name, prefix_dir)) {
-                // get directory attributes
+                // get directory attributes stat = file status
                 stat(file_in_dir->d_name, &dir_attr);
-                
+
                 // if directory time is newer than stored time
                 if ((int)dir_attr.st_mtime > newest_dir_time) {
                     newest_dir_time = (int)dir_attr.st_mtime;
