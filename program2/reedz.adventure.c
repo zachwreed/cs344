@@ -377,12 +377,10 @@ void play_game() {
                 }
                 else {
                     if (strstr(line, "time")) {
-                        int res = pthread_create(&mutex, NULL, write_time, NULL);
-                        res = pthread_join(thread, NULL);
+                        (void) pthread_create(&mutex, NULL, write_time, NULL);
+                        (void) pthread_join(&mutex, NULL);
 
-                        if (res == 0) {
-                          get_time()
-                        }
+                        get_time();
                     }
                     else {
                         printf("\nHUH? I DON'T UNDERSTAND THAT ROOM. TRY AGAIN.\n");
