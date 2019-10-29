@@ -379,7 +379,7 @@ void play_game() {
                 else {
                     if (strstr(line, "time")) {
                         pthread_create(&thread, NULL, write_time, NULL);
-                        pthread_join(&thread, NULL);
+                        pthread_join(thread, NULL);
                         get_time();
                     }
                     else {
