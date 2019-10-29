@@ -24,6 +24,7 @@
 #define CONNECT_PREFIX 11
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_t thread;
 
 struct room{
     char* type;
@@ -289,7 +290,7 @@ void get_time() {
  ** Preconditions: none
  ** Postconditions: currentTime.txt in . directory file appended with time if exists
  *****************************************************/
-void* write_time() {
+void* write_time(void* args) {
     pthread_mutex_lock(&mutex);
 
     char str[80];
@@ -377,8 +378,8 @@ void play_game() {
                 }
                 else {
                     if (strstr(line, "time")) {
-                        (void) pthread_create(&mutex, NULL, write_time, NULL);
-                        (void) pthread_join(&mutex, NULL);
+                        pthread_create(&thread, NULL, write_time, NULL);
+                        pthread_join(&thread, NULL);
                         get_time();
                     }
                     else {
