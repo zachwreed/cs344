@@ -377,9 +377,8 @@ void play_game() {
                 }
                 else {
                     if (strstr(line, "time")) {
-                        pthread_create(&mutex, NULL, write_time, NULL);
-                        pthread_join(&mutex, NULL);
-
+                        (void) pthread_create(&mutex, NULL, write_time, NULL);
+                        (void) pthread_join(&mutex, NULL);
                         get_time();
                     }
                     else {
