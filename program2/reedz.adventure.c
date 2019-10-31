@@ -279,7 +279,7 @@ void get_time() {
     //size_t ctlen = 16;
     //char* time_file = (char *) malloc(sizeof(char) * (wdlen + ctlen));
     //sprintf(time_file, "%s/currentTime.txt", working_dir);
-    FILE *file = fopen("currentTime.txt", "w");
+    FILE *file = fopen("currentTime.txt", "r");
     char line[256];
     char line_cpy[256];
     memset(line, '\0', 256);
