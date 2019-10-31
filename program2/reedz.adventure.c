@@ -279,7 +279,7 @@ void get_time() {
     //size_t ctlen = 16;
     //char* time_file = (char *) malloc(sizeof(char) * (wdlen + ctlen));
     //sprintf(time_file, "%s/currentTime.txt", working_dir);
-    FILE *file = fopen("currentTime.txt", "w+");
+    FILE *file = fopen("currentTime.txt", "w");
     char line[256];
     char line_cpy[256];
     memset(line, '\0', 256);
@@ -311,7 +311,7 @@ void* write_time(void* args) {
     time_p = localtime(&rawtime);
 
     strftime(str, maxsize, "%I:%M%p, %A, %B %d, %Y\n", time_p);
-    FILE *file = fopen("currentTime.txt", "a");
+    FILE *file = fopen("currentTime.txt", "w+");
     fputs(str, file);
     fclose(file);
 
