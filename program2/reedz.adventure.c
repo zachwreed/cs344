@@ -1,8 +1,17 @@
 /***************************************
  ** Author: Zach Reed
  ** Description: Build Rooms for Adventure
- ** Date: 5/8/2019
+ ** Date: 11/1/2019
  ****************************************/
+
+ /********************************
+  ** Citation
+  ** Author: Zach Reed
+  ** Date: 5/8/2019
+  ** Title: reedz.adventure.c
+  ** Description: adventure c code from spring term 2019
+ *********************************/
+
 
 #include <sys/stat.h>
 #include <sys/types.h>
