@@ -387,9 +387,13 @@ void play_game() {
                 }
                 else {
                     if (strstr(line, "time")) {
-                        pthread_create(&thread, NULL, write_time, NULL);
+                        pthread_mutex_unlock(&mutex);
                         pthread_join(thread, NULL);
+                        pthread_mutex_lock(&mutex);
+
                         get_time();
+                        pthread_create(&thread, NULL, write_time, NULL);
+
                     }
                     else {
                         printf("\nHUH? I DON'T UNDERSTAND THAT ROOM. TRY AGAIN.\n");
@@ -436,6 +440,8 @@ int main() {
         strcpy(working_dir, newest_dir);
         get_rooms(newest_dir);
         get_room_connections(newest_dir);
+        pthread_mutex_lock(&mutex);
+        pthread_create(&thread, NULL, write_time, NULL);
         play_game();
     }
     deconstructor();
