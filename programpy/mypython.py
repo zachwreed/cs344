@@ -4,6 +4,14 @@
 # -- Description: program py file
 # -----------------------------------------------
 
+ # -----------------------------------------
+ # -- Citation
+ # -- Author: Zach Reed
+ # -- Date: 5/8/2019
+ # -- Title: reedz.adventure.c
+ # -- Description: Python program from Spring 2019 term
+ # -----------------------------------------
+
 import random
 import string
 import sys
