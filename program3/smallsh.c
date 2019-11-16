@@ -60,12 +60,11 @@ int line_args(char* line) {
  char* token = strtok(line, ch);
 
  while (token != NULL) {
-
    // add token to command array
    command[i] = token;
    i++;
    token = strtok(NULL, ch);
-   printf("%s\n", token);
+   //printf("%s\n", token);
  }
  return i;
 }
@@ -81,7 +80,6 @@ void exec_command(char* line) {
 
  if (exec_valid >= 1) {
    execvp(command[0], command);
-   exit(0);
  }
  reset_command(exec_valid);
 }
@@ -108,7 +106,6 @@ char* cd_command(char* line) {
     case 1:
       chdir(home);
     break;
-
    // if directory specified ----
     case 2:
       cd = chdir(command[1]);
@@ -158,7 +155,6 @@ int main() {
     printf(": ");
     buff_line = getline(&line, &line_size, stdin);
     line[strcspn(line, "\n")] = '\0';
-    fflush(stdin);
 
     if (strncmp(CD, line, 2) == 0) {
       pwd = cd_command(line);
@@ -189,9 +185,9 @@ int main() {
     }
 
     // free line pointer
-    free(line);
-    line = NULL;
+    fflush(stdin);
     fflush(stdout);
+    line = NULL;
   }
   return 0;
 }
