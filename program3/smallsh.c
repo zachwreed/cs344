@@ -180,8 +180,8 @@ int main() {
       waitpid(spawn_pid, &sp_child_exit, 0);
       sp_exit_status = WIFEXITED(sp_child_exit);
       sp_term_sig = WTERMSIG(sp_child_exit);
-      // printf("Exit: %d\n", sp_exit_status);
-      // printf("Term Sig: %d\n", sp_term_sig);
+      printf("Exit: %d\n", sp_exit_status);
+      printf("Term Sig: %d\n", sp_term_sig);
     }
 
     // free line pointer
