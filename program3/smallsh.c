@@ -29,7 +29,8 @@ char* pwd;
 *****************************************/
 void constructor() {
  pwd = NULL;
- for (int i = 0; i < COM_ARGS; i++) {
+ int i;
+ for ( i = 0; i < COM_ARGS; i++) {
    command[i] = NULL;
  }
 }
@@ -40,7 +41,8 @@ void constructor() {
 ** Prerequisites: called in command function, args contains a valid positive integer
 *****************************************/
 void reset_command(int args) {
-  for (int i = 0; i < args; i++) {
+  int i;
+  for ( i = 0; i < args; i++) {
     command[i] = NULL;
   }
 }
