@@ -3,8 +3,9 @@
  ** Description: Smallsh
  ** Date:
  ****************************************/
-
-#include <sys/types.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -18,6 +19,7 @@
 #define EXIT "exit"
 #define CD "cd"
 #define STATUS "status"
+#define COMMENT "#"
 #define COM_ARGS 10
 char* command[COM_ARGS];
 char* pwd;
@@ -68,24 +70,6 @@ int line_args(char* line) {
  return i;
 }
 
-// int check_symbols(int args) {
-//   int i;
-//   for (i = 0; i < args; i++) {
-//     // if redirect stdin from next to stdout prev
-//     if (command[i] == '>' && i != 0 && i != (args -1)) {
-//
-//     }
-//     // if redirect stdout from prev to stdin next
-//     else if (command[i] == '<' && i != 0 && i != (args -1)) {
-//
-//     }
-//     // if comment line
-//     else if (command[i] == '#' && i == 0) {
-//       return 1;
-//     }
-//   }
-// }
-
 /****************************************
 ** Execute Command Function
 ** Description: Takes command and executes with working directory
@@ -95,31 +79,39 @@ int line_args(char* line) {
 void exec_command(char* line) {
  int execArgs = line_args(line);
  FILE *fp;
+ int in, out;
+ int isRedirect = 0;
 
  if (execArgs >= 1) {
+   // command [arg1 arg2 ...] [< input_file] [> output_file] [&]
 
    if (execArgs > 1) {
      int i;
      for (i = 0; i < execArgs; i++) {
-       // if redirect stdin from next to stdout prev
-       if (strcmp(">", command[i]) == 0 && i != 0 && i != execArgs -1) {
-        fp = fopen(command[i - 1], "a+");
-        dup2(3, 1);
+       // if redirect stdout
+       if (strcmp(">", command[i]) == 0 && command[i] != NULL && i != 0 && i != execArgs -1) {
+        //printf("%s\n", command[i + 1]);
+        out = open(command[i+1], O_WRONLY | O_TRUNC | O_CREAT, 0644);
+        dup2(out, 1);
+        fcntl(out, F_SETFD, FD_CLOEXEC);
+        isRedirect = 1;
        }
-       // if redirect stdout from prev to stdin next
-       else if (strcmp("<", command[i]) && i != 0 && i != execArgs -1) {
-         fp = fopen(command[i + 1], "r");
-         dup2(3, 0);
+       // if redirect stdin
+       else if (strcmp("<", command[i]) == 0 && command[i] != NULL && i != 0 && i != execArgs -1) {
+         in = open(command[i+1], O_RDONLY);
+         dup2(in, 0);
+         fcntl(in, F_SETFD, FD_CLOEXEC);
+         isRedirect = 1;
        }
-       // if comment line
-       // else if (command[i] == '#' && i == 0) {
-       //   return NULL;
-       // }
      }
    }
-   execvp(command[0], command);
-   fclose(fp);
- }
+   if(isRedirect == 1) {
+     execlp(command[0], command[0], NULL);
+   }
+   else {
+     execvp(command[0], command);
+   }
+  }
  reset_command(execArgs);
 }
 
@@ -203,6 +195,10 @@ int main() {
       status_command(line, sp_exit_status, sp_term_sig);
     }
 
+    else if (strncmp(COMMENT, line, 1) == 0) {
+      continue;
+    }
+
     else if (strcmp(EXIT, line) == 0) {
       printf(": exit called\n");
       break;
@@ -223,7 +219,7 @@ int main() {
 
       sp_exit_status = WIFEXITED(sp_child_exit);
       sp_term_sig = WTERMSIG(sp_child_exit);
-      
+
       printf("Exit: %d\n", sp_exit_status);
       printf("Term Sig: %d\n", sp_term_sig);
     }
