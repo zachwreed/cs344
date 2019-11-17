@@ -42,7 +42,7 @@ void constructor() {
 *****************************************/
 void reset_command(int args) {
   int i;
-  for ( i = 0; i < args; i++) {
+  for (i = 0; i < args; i++) {
     command[i] = NULL;
   }
 }
@@ -53,7 +53,6 @@ void reset_command(int args) {
 ** Prerequisites: line points to a valid string, command[] is initialized to NULL
 ** Postrequisites: command[] is initialized up to [i],
 *****************************************/
-
 int line_args(char* line) {
  const char ch[2] = " ";
  int i = 0;
@@ -69,6 +68,24 @@ int line_args(char* line) {
  return i;
 }
 
+int check_symbols(int args) {
+  int i;
+  for (i = 0; i < args; i++) {
+    // if redirect stdin from next to stdout prev
+    if (command[i] == '>' && i != 0 && i != (args -1)) {
+
+    }
+    // if redirect stdout from prev to stdin next
+    else if (command[i] == '<' && i != 0 && i != (args -1)) {
+
+    }
+    // if comment line
+    else if (command[i] == '#' && i == 0) {
+      return 1;
+    }
+  }
+}
+
 /****************************************
 ** Execute Command Function
 ** Description: Takes command and executes with working directory
@@ -77,12 +94,38 @@ int line_args(char* line) {
 *****************************************/
 void exec_command(char* line) {
  int exec_valid = line_args(line);
+ FILE *fp;
 
  if (exec_valid >= 1) {
+
+   if (exec_valid > 1) {
+     //fp = check_redirect(exec_valid);
+     int i;
+     for (i = 0; i < exec_valid; i++) {
+       // if redirect stdin from next to stdout prev
+       if (command[i] == '>' && i != 0 && i != (args -1)) {
+        fp = fopen(command[i - 1], "a+");
+        dup(3, 1)
+       }
+       // if redirect stdout from prev to stdin next
+       else if (command[i] == '<' && i != 0 && i != (args -1)) {
+         fp = fopen(command[i + 1], "r");
+         dup2(3, 0)
+       }
+       // if comment line
+       // else if (command[i] == '#' && i == 0) {
+       //   return NULL;
+       // }
+     }
+   }
    execvp(command[0], command);
+   fclose(fp);
  }
  reset_command(exec_valid);
 }
+
+// FILE* check_redirect(int args) {
+// }
 
 /****************************************
 ** CD Command Function
@@ -171,13 +214,18 @@ int main() {
 
     // If Non-build in command
     else {
+      fflush(stdout);
+      fflush(stdin);
       spawn_pid = fork();
 
       // IF child spawn, execute function
       if (spawn_pid == 0) {
         exec_command(line);
       }
+
       waitpid(spawn_pid, &sp_child_exit, 0);
+
+      if ()
       sp_exit_status = WIFEXITED(sp_child_exit);
       sp_term_sig = WTERMSIG(sp_child_exit);
       printf("Exit: %d\n", sp_exit_status);
@@ -185,8 +233,6 @@ int main() {
     }
 
     // free line pointer
-    fflush(stdin);
-    fflush(stdout);
     line = NULL;
   }
   return 0;
