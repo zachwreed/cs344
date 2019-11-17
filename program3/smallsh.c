@@ -93,21 +93,21 @@ int line_args(char* line) {
 ** Postrequisites: command[] is initialized up to [i],
 *****************************************/
 void exec_command(char* line) {
- int exec_valid = line_args(line);
+ int execArgs = line_args(line);
  FILE *fp;
 
- if (exec_valid >= 1) {
+ if (execArgs >= 1) {
 
-   if (exec_valid > 1) {
+   if (execArgs > 1) {
      int i;
-     for (i = 0; i < exec_valid; i++) {
+     for (i = 0; i < execArgs; i++) {
        // if redirect stdin from next to stdout prev
-       if (strcmp('>', command[i]) == 0 && i != 0 && i != (args -1)) {
+       if (strcmp(">", command[i]) == 0 && i != 0 && i != execArgs -1) {
         fp = fopen(command[i - 1], "a+");
-        dup(3, 1);
+        dup2(3, 1);
        }
        // if redirect stdout from prev to stdin next
-       else if (strcmp('<', command[i]) && i != 0 && i != (args -1)) {
+       else if (strcmp("<", command[i]) && i != 0 && i != execArgs -1) {
          fp = fopen(command[i + 1], "r");
          dup2(3, 0);
        }
@@ -120,7 +120,7 @@ void exec_command(char* line) {
    execvp(command[0], command);
    fclose(fp);
  }
- reset_command(exec_valid);
+ reset_command(execArgs);
 }
 
 /****************************************
@@ -221,9 +221,9 @@ int main() {
 
       waitpid(spawn_pid, &sp_child_exit, 0);
 
-      if ()
       sp_exit_status = WIFEXITED(sp_child_exit);
       sp_term_sig = WTERMSIG(sp_child_exit);
+      
       printf("Exit: %d\n", sp_exit_status);
       printf("Term Sig: %d\n", sp_term_sig);
     }
