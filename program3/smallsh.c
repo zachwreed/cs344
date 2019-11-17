@@ -68,23 +68,23 @@ int line_args(char* line) {
  return i;
 }
 
-int check_symbols(int args) {
-  int i;
-  for (i = 0; i < args; i++) {
-    // if redirect stdin from next to stdout prev
-    if (command[i] == '>' && i != 0 && i != (args -1)) {
-
-    }
-    // if redirect stdout from prev to stdin next
-    else if (command[i] == '<' && i != 0 && i != (args -1)) {
-
-    }
-    // if comment line
-    else if (command[i] == '#' && i == 0) {
-      return 1;
-    }
-  }
-}
+// int check_symbols(int args) {
+//   int i;
+//   for (i = 0; i < args; i++) {
+//     // if redirect stdin from next to stdout prev
+//     if (command[i] == '>' && i != 0 && i != (args -1)) {
+//
+//     }
+//     // if redirect stdout from prev to stdin next
+//     else if (command[i] == '<' && i != 0 && i != (args -1)) {
+//
+//     }
+//     // if comment line
+//     else if (command[i] == '#' && i == 0) {
+//       return 1;
+//     }
+//   }
+// }
 
 /****************************************
 ** Execute Command Function
@@ -99,7 +99,6 @@ void exec_command(char* line) {
  if (exec_valid >= 1) {
 
    if (exec_valid > 1) {
-     //fp = check_redirect(exec_valid);
      int i;
      for (i = 0; i < exec_valid; i++) {
        // if redirect stdin from next to stdout prev
@@ -123,9 +122,6 @@ void exec_command(char* line) {
  }
  reset_command(exec_valid);
 }
-
-// FILE* check_redirect(int args) {
-// }
 
 /****************************************
 ** CD Command Function
