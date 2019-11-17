@@ -103,14 +103,14 @@ void exec_command(char* line) {
      int i;
      for (i = 0; i < exec_valid; i++) {
        // if redirect stdin from next to stdout prev
-       if (command[i] == '>' && i != 0 && i != (args -1)) {
+       if (strcmp('>', command[i]) == 0 && i != 0 && i != (args -1)) {
         fp = fopen(command[i - 1], "a+");
-        dup(3, 1)
+        dup(3, 1);
        }
        // if redirect stdout from prev to stdin next
-       else if (command[i] == '<' && i != 0 && i != (args -1)) {
+       else if (strcmp('<', command[i]) && i != 0 && i != (args -1)) {
          fp = fopen(command[i + 1], "r");
-         dup2(3, 0)
+         dup2(3, 0);
        }
        // if comment line
        // else if (command[i] == '#' && i == 0) {
