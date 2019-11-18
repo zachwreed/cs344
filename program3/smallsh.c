@@ -97,27 +97,46 @@ void exec_command(char* line) {
        if (strcmp(">", command[i]) == 0 && command[i] != NULL && i != 0 && i != execArgs -1) {
         //printf("%s\n", command[i + 1]);
         out = open(command[i+1], O_WRONLY | O_TRUNC | O_CREAT, 0644);
-        dup2(out, 1);
-        fcntl(out, F_SETFD, FD_CLOEXEC);
-        isRedirect = 1;
+         char* err = command[i+1];
+        if (out < 0) {
+          perror(command[i+1]);
+          exit(1);
+        }
+        else {
+          dup2(out, 1);
+          fcntl(out, F_SETFD, FD_CLOEXEC);
+          isRedirect = 1;
+        }
        }
        // if redirect stdin
        else if (strcmp("<", command[i]) == 0 && command[i] != NULL && i != 0 && i != execArgs -1) {
          in = open(command[i+1], O_RDONLY);
-         dup2(in, 0);
-         fcntl(in, F_SETFD, FD_CLOEXEC);
-         isRedirect = 1;
+
+         if (in < 0) {
+           perror(command[i+1]);
+           exit(1);
+         }
+         else {
+           dup2(in, 0);
+           fcntl(in, F_SETFD, FD_CLOEXEC);
+           isRedirect = 1;
+         }
        }
      }
    }
    if(isRedirect == 1) {
      execlp(command[0], command[0], NULL);
+     perror("Exec Failure!\n");
+     exit(1);
    }
    else {
      execvp(command[0], command);
+     perror("Exec Failure!\n");
+     exit(1);
    }
-  }
+ }
  reset_command(execArgs);
+ exit(0);
 }
 
 /****************************************
@@ -238,17 +257,23 @@ int main() {
 
       waitpid(spawn_pid, &sp_child_exit, 0);
 
+      if (spawn_pid == -1) {
+        printf("wait failed\n");
+        exit(1);
+      }
+
       if (WIFEXITED(sp_child_exit)) {
         sp_exit_status = WEXITSTATUS(sp_child_exit);
-        sp_term_signal = 0;
         printf("Exited: %d\n", sp_exit_status);
       }
+
       if (WIFSIGNALED(sp_child_exit)) {
         sp_term_signal = WTERMSIG(sp_child_exit);
-        sp_exit_status = 0;
         printf("Term Sig: %d\n", sp_term_signal);
       }
 
+      // sp_exit_status = WEXITSTATUS(sp_child_exit);
+      // sp_term_signal = WTERMSIG(sp_child_exit);
       // printf("Exited: %d\n", sp_exit_status);
       // printf("Term Sig: %d\n", sp_term_signal);
     }
