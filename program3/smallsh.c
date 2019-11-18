@@ -19,7 +19,12 @@
 #define EXIT "exit"
 #define CD "cd"
 #define STATUS "status"
+// Arg Flags
 #define COMMENT "#"
+#define BACKGROUND " &"
+// Boolean
+#define TRUE 1
+#define FALSE 0
 #define COM_ARGS 10
 char* command[COM_ARGS];
 char* pwd;
@@ -159,9 +164,14 @@ char* cd_command(char* line) {
 *****************************************/
 void status_command(char* line, int term_sig, int exit_status) {
    int st_valid = line_args(line);
-
-   if (st_valid == 1 && strcmp(command[0], STATUS)) {
-
+   printf("Exit: %d, Term: %d\n", exit_status, term_sig);
+   if (st_valid == 1 && strcmp(command[0], STATUS) == 0) {
+     if (exit_status == 0 && term_sig != 0) {
+       printf("exit value %d\n", exit_status);
+     }
+     if (exit_status != 0 && term_sig == 0) {
+       printf("terminated by signal %d\n", exit_status);
+     }
    }
    reset_command(st_valid);
   }
@@ -174,25 +184,32 @@ void status_command(char* line, int term_sig, int exit_status) {
 *****************************************/
 int main() {
    constructor();
+   char endOfLine[3];
    char *line = NULL;
    size_t line_size = 256;
    size_t buff_line;
+   size_t line_n;
    pid_t spawn_pid = -5;
    int sp_child_exit = -5;
-   int sp_exit_status = -5;
-   int sp_term_sig = -5;
+
+   int sp_exit_status = 0;
+   int sp_term_signal = 0;
 
   while(1) {
     printf(": ");
     buff_line = getline(&line, &line_size, stdin);
+    line_n = strlen(line);
+    memcpy(endOfLine, &line[line_n - 3], 2);
+    endOfLine[2] = '\0';
     line[strcspn(line, "\n")] = '\0';
+
 
     if (strncmp(CD, line, 2) == 0) {
       pwd = cd_command(line);
     }
 
     else if (strcmp(STATUS, line) == 0) {
-      status_command(line, sp_exit_status, sp_term_sig);
+      status_command(line, sp_term_signal, sp_exit_status);
     }
 
     else if (strncmp(COMMENT, line, 1) == 0) {
@@ -202,6 +219,10 @@ int main() {
     else if (strcmp(EXIT, line) == 0) {
       printf(": exit called\n");
       break;
+    }
+
+    else if(strcmp(BACKGROUND, endOfLine) == 0) {
+      printf(": background process called");
     }
 
     // If Non-build in command
@@ -217,11 +238,19 @@ int main() {
 
       waitpid(spawn_pid, &sp_child_exit, 0);
 
-      sp_exit_status = WIFEXITED(sp_child_exit);
-      sp_term_sig = WTERMSIG(sp_child_exit);
+      if (WIFEXITED(sp_child_exit)) {
+        sp_exit_status = WEXITSTATUS(sp_child_exit);
+        sp_term_signal = 0;
+        printf("Exited: %d\n", sp_exit_status);
+      }
+      if (WIFSIGNALED(sp_child_exit)) {
+        sp_term_signal = WTERMSIG(sp_child_exit);
+        sp_exit_status = 0;
+        printf("Term Sig: %d\n", sp_term_signal);
+      }
 
-      printf("Exit: %d\n", sp_exit_status);
-      printf("Term Sig: %d\n", sp_term_sig);
+      // printf("Exited: %d\n", sp_exit_status);
+      // printf("Term Sig: %d\n", sp_term_signal);
     }
 
     // free line pointer
