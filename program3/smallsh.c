@@ -183,12 +183,13 @@ char* cd_command(char* line) {
 *****************************************/
 void status_command(char* line, int term_sig, int exit_status) {
    int st_valid = line_args(line);
-   printf("Exit: %d, Term: %d\n", exit_status, term_sig);
+
    if (st_valid == 1 && strcmp(command[0], STATUS) == 0) {
-     if (exit_status == 0 && term_sig != 0) {
+
+     if (exit_status >= 0 && term_sig < 0) {
        printf("exit value %d\n", exit_status);
      }
-     if (exit_status != 0 && term_sig == 0) {
+     if (exit_status < 0 && term_sig >= 0) {
        printf("terminated by signal %d\n", exit_status);
      }
    }
@@ -213,6 +214,7 @@ int main() {
 
    int sp_exit_status = 0;
    int sp_term_signal = 0;
+   int
 
   while(1) {
     printf(": ");
@@ -221,6 +223,7 @@ int main() {
     memcpy(endOfLine, &line[line_n - 3], 2);
     endOfLine[2] = '\0';
     line[strcspn(line, "\n")] = '\0';
+
 
 
     if (strncmp(CD, line, 2) == 0) {
@@ -236,7 +239,7 @@ int main() {
     }
 
     else if (strcmp(EXIT, line) == 0) {
-      printf(": exit called\n");
+      exit(0);
       break;
     }
 
@@ -264,12 +267,12 @@ int main() {
 
       if (WIFEXITED(sp_child_exit)) {
         sp_exit_status = WEXITSTATUS(sp_child_exit);
-        printf("Exited: %d\n", sp_exit_status);
+        sp_term_signal = -1;
       }
 
       if (WIFSIGNALED(sp_child_exit)) {
         sp_term_signal = WTERMSIG(sp_child_exit);
-        printf("Term Sig: %d\n", sp_term_signal);
+        sp_exit_status = -1;
       }
 
       // sp_exit_status = WEXITSTATUS(sp_child_exit);
