@@ -81,7 +81,7 @@ int line_args(char* line) {
  const char ch[2] = " ";
  int i = 0;
  char* token = strtok(line, ch);
-
+ printf("%s\n", token);
  while (token != NULL) {
    // add token to command array
    if (strcmp("&", token) != 0) {
@@ -89,7 +89,7 @@ int line_args(char* line) {
      i++;
      token = strtok(NULL, ch);
    }
-   //printf("%s\n", token);
+   printf("%s\n", token);
  }
  return i;
 }
@@ -317,81 +317,11 @@ int main() {
             SIGINT_action.sa_handler = SIG_DFL;
             sigaction(SIGINT, &SIGINT_action, NULL);
           }
-          // here
           //exec_command(line, bg);
-          int execArgs = line_args(line);
-          FILE *fp;
-          int dv;
-          int in, out;
-          int isRedirect = 0;
 
-          if (execArgs >= 1) {
-            // command [arg1 arg2 ...] [< input_file] [> output_file] [&]
-
-            if (execArgs > 1) {
-              int i;
-              for (i = 0; i < execArgs; i++) {
-                // if redirect stdout
-                if (strcmp(">", command[i]) == 0 && command[i] != NULL && i != 0 && i != execArgs -1) {
-                 //printf("%s\n", command[i + 1]);
-                 out = open(command[i+1], O_WRONLY | O_TRUNC | O_CREAT, 0644);
-                  char* err = command[i+1];
-                 if (out < 0) {
-                   perror(command[i+1]);
-                   exit(1);
-                 }
-                 else {
-                   dup2(out, 1);
-                   fcntl(out, F_SETFD, FD_CLOEXEC);
-                   isRedirect = 1;
-                 }
-                }
-                // if redirect stdin
-                else if (strcmp("<", command[i]) == 0 && command[i] != NULL && i != 0 && i != execArgs -1) {
-                  in = open(command[i+1], O_RDONLY);
-
-                  if (in < 0) {
-                    perror(command[i+1]);
-                    exit(1);
-                  }
-                  else {
-                    dup2(in, 0);
-                    fcntl(in, F_SETFD, FD_CLOEXEC);
-                    isRedirect = 1;
-                  }
-                }
-              }
-            }
-
-            if (bg == TRUE && isRedirect == 0) {
-              dv = open("/dev/null", O_RDONLY);
-              if (dv < 0) {
-                perror("open error");
-                exit(1);
-              }
-              int err = dup2(dv, 1);
-              if (err == -1) {
-                perror("dup2");
-              }
-              fcntl(dv, F_SETFD, FD_CLOEXEC);
-            }
-
-            if(isRedirect == 1) {
-              execlp(command[0], command[0], NULL);
-              perror("Exec Failure!\n");
-              exit(1);
-            }
-            else {
-              execvp(command[0], command);
-              perror("Exec Failure!\n");
-              exit(1);
-            }
-          }
-          reset_command(execArgs);
-          fflush(stdout);
-          // here
+          //
           exit(0);
-        break;
+          break;
 
         default:
         if (bg == FALSE) {
