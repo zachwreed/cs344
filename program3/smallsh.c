@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <sys/wait.h>
 #include <limits.h>
+#include <signal.h>
 
 // Built in commands
 #define EXIT "exit"
@@ -67,9 +68,11 @@ int line_args(char* line) {
 
  while (token != NULL) {
    // add token to command array
-   command[i] = token;
-   i++;
-   token = strtok(NULL, ch);
+   if (strcmp("&", token) != 0) {
+     command[i] = token;
+     i++;
+     token = strtok(NULL, ch);
+   }
    //printf("%s\n", token);
  }
  return i;
@@ -197,24 +200,32 @@ void status_command(char* line, int term_sig, int exit_status) {
   }
 
 /****************************************
+** Status Command
+** Description:
+** Prerequisites:
+** Postrequisites:
+*****************************************/
+
+
+/****************************************
 ** Main
 ** Description: Initializes variables and handles command line loop, calls functions when passed.
 ** Prerequisites: None
 ** Postrequisites:
 *****************************************/
 int main() {
-   constructor();
-   char endOfLine[3];
-   char *line = NULL;
-   size_t line_size = 256;
-   size_t buff_line;
-   size_t line_n;
-   pid_t spawn_pid = -5;
-   int sp_child_exit = -5;
+  constructor();
+  char endOfLine[3];
+  char *line = NULL;
+  size_t line_size = 256;
+  size_t line_n;
+  pid_t spawn_pid = -5;
+  int sp_child_exit = -5;
+  size_t buff_line;
 
-   int sp_exit_status = 0;
-   int sp_term_signal = 0;
-   int
+  int sp_exit_status = 0;
+  int sp_term_signal = 0;
+  int bg = FALSE;
 
   while(1) {
     printf(": ");
@@ -224,7 +235,7 @@ int main() {
     endOfLine[2] = '\0';
     line[strcspn(line, "\n")] = '\0';
 
-
+    // Check Line for Built-In Functions And Handlers
 
     if (strncmp(CD, line, 2) == 0) {
       pwd = cd_command(line);
@@ -243,26 +254,39 @@ int main() {
       break;
     }
 
-    else if(strcmp(BACKGROUND, endOfLine) == 0) {
-      printf(": background process called");
-    }
-
     // If Non-build in command
     else {
+      if(strcmp(BACKGROUND, endOfLine) == 0) {
+        bg = TRUE;
+      }
+
       fflush(stdout);
       fflush(stdin);
       spawn_pid = fork();
 
+      if (spawn_pid == -1) {
+        printf("wait failed\n");
+        exit(1);
+      }
       // IF child spawn, execute function
       if (spawn_pid == 0) {
         exec_command(line);
       }
 
-      waitpid(spawn_pid, &sp_child_exit, 0);
+      if (bg == TRUE) {
+        waitpid(spawn_pid, &sp_child_exit, WNOHANG);
+        printf("background pid is %d\n", spawn_pid);
+        fflush(stdout);
 
-      if (spawn_pid == -1) {
-        printf("wait failed\n");
-        exit(1);
+        while ((spawn_pid = waitpid(-1, &sp_child_exit, WNOHANG)) > 0) {
+          printf("background pid %d is done:\n", spawn_pid);
+          fflush(stdout);
+        }
+        bg = FALSE;
+      }
+
+      if (bg == FALSE) {
+        waitpid(spawn_pid, &sp_child_exit, 0);
       }
 
       if (WIFEXITED(sp_child_exit)) {
@@ -274,11 +298,6 @@ int main() {
         sp_term_signal = WTERMSIG(sp_child_exit);
         sp_exit_status = -1;
       }
-
-      // sp_exit_status = WEXITSTATUS(sp_child_exit);
-      // sp_term_signal = WTERMSIG(sp_child_exit);
-      // printf("Exited: %d\n", sp_exit_status);
-      // printf("Term Sig: %d\n", sp_term_signal);
     }
 
     // free line pointer
