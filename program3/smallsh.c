@@ -81,7 +81,7 @@ int line_args(char* line) {
  const char ch[2] = " ";
  int i = 0;
  char* token = strtok(line, ch);
- printf("%s\n", token);
+
  while (token != NULL) {
    // add token to command array
    if (strcmp("&", token) != 0) {
@@ -89,7 +89,7 @@ int line_args(char* line) {
      i++;
      token = strtok(NULL, ch);
    }
-   printf("%s\n", token);
+   //printf("%s\n", token);
  }
  return i;
 }
@@ -317,10 +317,7 @@ int main() {
             SIGINT_action.sa_handler = SIG_DFL;
             sigaction(SIGINT, &SIGINT_action, NULL);
           }
-          //exec_command(line, bg);
-
-          //
-          exit(0);
+          exec_command(line, bg);
           break;
 
         default:
