@@ -43,6 +43,18 @@ void constructor() {
  }
 }
 
+// From lecture
+void catchSIGINT(int signo){
+  char* message = "SIGINT. Use CTRL-Z to Stop.\n";
+  write(STDOUT_FILENO, message, 28);
+}
+
+void catchSIGSTP(int signo) {
+  char* message = "SIGSTP. Use CTRL-Z to Stop.\n";
+  write(STDOUT_FILENO, message, 25);
+  exit(0);
+}
+
 /****************************************
 ** Reset Command Array
 ** Description: Resets arrray up to args count
@@ -84,9 +96,10 @@ int line_args(char* line) {
 ** Prerequisites: line points to a valid string, command[] is initialized to NULL
 ** Postrequisites: command[] is initialized up to [i],
 *****************************************/
-void exec_command(char* line) {
+void exec_command(char* line, int bg) {
  int execArgs = line_args(line);
  FILE *fp;
+ int dv;
  int in, out;
  int isRedirect = 0;
 
@@ -127,6 +140,17 @@ void exec_command(char* line) {
        }
      }
    }
+
+   if (bg == TRUE) {
+     dv = open("/dev/null", O_RDONLY);
+     if (dv < 0) {
+       perror("open error");
+       exit(1);
+     }
+     dup2(dv, 1);
+     fcntl(dv, F_SETFD, FD_CLOEXEC);
+   }
+
    if(isRedirect == 1) {
      execlp(command[0], command[0], NULL);
      perror("Exec Failure!\n");
@@ -138,7 +162,7 @@ void exec_command(char* line) {
      exit(1);
    }
  }
- reset_command(execArgs);
+ fflush(stdout);
  exit(0);
 }
 
@@ -199,13 +223,6 @@ void status_command(char* line, int term_sig, int exit_status) {
    reset_command(st_valid);
   }
 
-/****************************************
-** Status Command
-** Description:
-** Prerequisites:
-** Postrequisites:
-*****************************************/
-
 
 /****************************************
 ** Main
@@ -227,7 +244,19 @@ int main() {
   int sp_term_signal = 0;
   int bg = FALSE;
 
+  struct sigaction SIGINT_action = {0};
+  SIGINT_action.sa_handler = catchSIGINT;
+  sigfillset(&SIGINT_action.sa_mask);
+  sigaction(SIGINT, &SIGINT_action, NULL);
+
+  struct sigaction SIGSTP_action = {0};
+  SIGSTP_action.sa_handler = catchSIGSTP;
+  sigfillset(&SIGSTP_action.sa_mask);
+  sigaction(SIGINT, &SIGSTP_action, NULL);
+
+
   while(1) {
+    bg = FALSE;
     printf(": ");
     buff_line = getline(&line, &line_size, stdin);
     line_n = strlen(line);
@@ -242,6 +271,17 @@ int main() {
     }
 
     else if (strcmp(STATUS, line) == 0) {
+
+      if (WIFEXITED(sp_child_exit)) {
+        sp_exit_status = WEXITSTATUS(sp_child_exit);
+        sp_term_signal = -1;
+      }
+
+      if (WIFSIGNALED(sp_child_exit)) {
+        sp_term_signal = WTERMSIG(sp_child_exit);
+        sp_exit_status = -1;
+      }
+
       status_command(line, sp_term_signal, sp_exit_status);
     }
 
@@ -255,53 +295,38 @@ int main() {
     }
 
     // If Non-build in command
+    // If Non-build in command
     else {
-      if(strcmp(BACKGROUND, endOfLine) == 0) {
+      if (strcmp(BACKGROUND, endOfLine) == 0) {
         bg = TRUE;
       }
 
-      fflush(stdout);
-      fflush(stdin);
       spawn_pid = fork();
+      switch(spawn_pid) {
+        case -1:
+          perror("Hull Breach!\n");
+          exit(1);
+          break;
 
-      if (spawn_pid == -1) {
-        printf("wait failed\n");
-        exit(1);
-      }
-      // IF child spawn, execute function
-      if (spawn_pid == 0) {
-        exec_command(line);
-      }
+        case 0:
+          exec_command(line, bg);
+          break;
 
-      if (bg == TRUE) {
-        waitpid(spawn_pid, &sp_child_exit, WNOHANG);
-        printf("background pid is %d\n", spawn_pid);
-        fflush(stdout);
-
-        while ((spawn_pid = waitpid(-1, &sp_child_exit, WNOHANG)) > 0) {
-          printf("background pid %d is done:\n", spawn_pid);
-          fflush(stdout);
+        default:
+        if (bg == FALSE) {
+          waitpid(spawn_pid, &sp_child_exit, 0);
         }
-        bg = FALSE;
-      }
 
-      if (bg == FALSE) {
-        waitpid(spawn_pid, &sp_child_exit, 0);
-      }
-
-      if (WIFEXITED(sp_child_exit)) {
-        sp_exit_status = WEXITSTATUS(sp_child_exit);
-        sp_term_signal = -1;
-      }
-
-      if (WIFSIGNALED(sp_child_exit)) {
-        sp_term_signal = WTERMSIG(sp_child_exit);
-        sp_exit_status = -1;
+        if (bg == TRUE) {
+          printf("background pid is %d\n", spawn_pid);
+        }
       }
     }
-
+    while ((spawn_pid = waitpid(-1, &sp_child_exit, WNOHANG)) > 0) {
+      printf("background pid %d is done:\n", spawn_pid);
+      fflush(stdout);
+    }
     // free line pointer
-    line = NULL;
   }
   return 0;
 }
