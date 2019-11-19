@@ -332,6 +332,8 @@ int main() {
         break;
       }
     }
+    reset_command(COM_ARGS);
+
     printf("Spawn pid = %d\n", spawn_pid);
     while ((spawn_pid = waitpid(-1, &sp_child_exit, WNOHANG)) > 0) {
       printf("background pid %d is done:\n", spawn_pid);
