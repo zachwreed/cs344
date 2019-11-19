@@ -8,3 +8,4 @@ program3/smallsh
 program3/smallsh.o
 program3/test
 program3/test.c
+program3/smallsh_test.c

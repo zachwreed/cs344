@@ -16,6 +16,7 @@
 #include <limits.h>
 #include <signal.h>
 
+
 // Built in commands
 #define EXIT "exit"
 #define CD "cd"
@@ -29,6 +30,9 @@
 #define COM_ARGS 10
 char* command[COM_ARGS];
 char* pwd;
+struct sigaction SIGINT_action = {0};
+struct sigaction SIGSTP_action = {0};
+
 
 /****************************************
 ** Constructor
@@ -63,7 +67,7 @@ void catchSIGSTP(int signo) {
 void reset_command(int args) {
   int i;
   for (i = 0; i < args; i++) {
-    command[i] = NULL;
+    free(command[i]);
   }
 }
 
@@ -141,13 +145,16 @@ void exec_command(char* line, int bg) {
      }
    }
 
-   if (bg == TRUE) {
+   if (bg == TRUE && isRedirect == 0) {
      dv = open("/dev/null", O_RDONLY);
      if (dv < 0) {
        perror("open error");
        exit(1);
      }
-     dup2(dv, 1);
+     int err = dup2(dv, 1);
+     if (err == -1) {
+       perror("dup2");
+     }
      fcntl(dv, F_SETFD, FD_CLOEXEC);
    }
 
@@ -162,8 +169,8 @@ void exec_command(char* line, int bg) {
      exit(1);
    }
  }
+ reset_command(execArgs);
  fflush(stdout);
- exit(0);
 }
 
 /****************************************
@@ -198,7 +205,6 @@ char* cd_command(char* line) {
     break;
  }
  // if wd changed, set pwd to new wd
- reset_command(cd_valid);
  return getcwd(cwd, sizeof(cwd));
 }
 
@@ -244,12 +250,10 @@ int main() {
   int sp_term_signal = 0;
   int bg = FALSE;
 
-  struct sigaction SIGINT_action = {0};
   SIGINT_action.sa_handler = catchSIGINT;
   sigfillset(&SIGINT_action.sa_mask);
   sigaction(SIGINT, &SIGINT_action, NULL);
 
-  struct sigaction SIGSTP_action = {0};
   SIGSTP_action.sa_handler = catchSIGSTP;
   sigfillset(&SIGSTP_action.sa_mask);
   sigaction(SIGINT, &SIGSTP_action, NULL);
@@ -295,7 +299,6 @@ int main() {
     }
 
     // If Non-build in command
-    // If Non-build in command
     else {
       if (strcmp(BACKGROUND, endOfLine) == 0) {
         bg = TRUE;
@@ -309,7 +312,13 @@ int main() {
           break;
 
         case 0:
+          fflush(stdout);
+          if (bg == FALSE) {
+            SIGINT_action.sa_handler = SIG_DFL;
+            sigaction(SIGINT, &SIGINT_action, NULL);
+          }
           exec_command(line, bg);
+          exit(0);
           break;
 
         default:
@@ -320,13 +329,13 @@ int main() {
         if (bg == TRUE) {
           printf("background pid is %d\n", spawn_pid);
         }
+        break;
       }
     }
+    printf("Spawn pid = %d\n", spawn_pid);
     while ((spawn_pid = waitpid(-1, &sp_child_exit, WNOHANG)) > 0) {
       printf("background pid %d is done:\n", spawn_pid);
-      fflush(stdout);
     }
-    // free line pointer
   }
   return 0;
 }
