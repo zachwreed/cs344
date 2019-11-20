@@ -16,7 +16,6 @@
 #include <limits.h>
 #include <signal.h>
 
-
 // Built in commands
 #define EXIT "exit"
 #define CD "cd"
@@ -30,8 +29,6 @@
 #define COM_ARGS 10
 char* command[COM_ARGS];
 char* pwd;
-struct sigaction SIGINT_action = {0};
-struct sigaction SIGSTP_action = {0};
 
 
 /****************************************
@@ -49,14 +46,14 @@ void constructor() {
 
 // From lecture
 void catchSIGINT(int signo){
-  char* message = "SIGINT. Use CTRL-Z to Stop.\n";
+  char* message = "SIGINT. \n";
   write(STDOUT_FILENO, message, 28);
 }
 
 void catchSIGSTP(int signo) {
-  char* message = "SIGSTP. Use CTRL-Z to Stop.\n";
+  char* message = "SIGSTP. \n";
   write(STDOUT_FILENO, message, 25);
-  exit(0);
+  _Exit(0);
 }
 
 /****************************************
@@ -67,7 +64,7 @@ void catchSIGSTP(int signo) {
 void reset_command(int args) {
   int i;
   for (i = 0; i < args; i++) {
-    free(command[i]);
+    command[i] = NULL;
   }
 }
 
@@ -151,7 +148,7 @@ void exec_command(char* line, int bg) {
        perror("open error");
        exit(1);
      }
-     int err = dup2(dv, 1);
+     int err = dup2(dv, 0);
      if (err == -1) {
        perror("dup2");
      }
@@ -169,8 +166,7 @@ void exec_command(char* line, int bg) {
      exit(1);
    }
  }
- reset_command(execArgs);
- fflush(stdout);
+ return;
 }
 
 /****************************************
@@ -250,13 +246,20 @@ int main() {
   int sp_term_signal = 0;
   int bg = FALSE;
 
-  SIGINT_action.sa_handler = catchSIGINT;
+  struct sigaction SIGINT_action = {0};
+  struct sigaction SIGSTP_action = {0};
+  struct sigaction SIGIGN_action = {0};
+
+  SIGINT_action.sa_handler = SIG_IGN;
+  SIGINT_action.sa_flags = 0;
   sigfillset(&SIGINT_action.sa_mask);
   sigaction(SIGINT, &SIGINT_action, NULL);
 
   SIGSTP_action.sa_handler = catchSIGSTP;
+  SIGSTP_action.sa_flags = 0;
   sigfillset(&SIGSTP_action.sa_mask);
-  sigaction(SIGINT, &SIGSTP_action, NULL);
+  sigaction(SIGTSTP, &SIGSTP_action, NULL);
+
 
 
   while(1) {
@@ -290,6 +293,11 @@ int main() {
     }
 
     else if (strncmp(COMMENT, line, 1) == 0) {
+      continue;
+    }
+
+    else if (line == NULL) {
+      printf("Empty line\n");
       continue;
     }
 
@@ -332,9 +340,10 @@ int main() {
       }
     }
     reset_command(COM_ARGS);
-
+    printf("Spawn ID: %d\n", spawn_pid);
     while ((spawn_pid = waitpid(-1, &sp_child_exit, WNOHANG)) > 0) {
       printf("background pid %d is done:\n", spawn_pid);
+      fflush(stdout);
     }
   }
   return 0;
