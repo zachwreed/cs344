@@ -9,3 +9,6 @@ program3/smallsh.o
 program3/test
 program3/test.c
 program3/smallsh_test.c
+program3/int
+program3/int.c
+program3/.DS_Store

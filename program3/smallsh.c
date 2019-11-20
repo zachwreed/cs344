@@ -27,7 +27,6 @@
 #define TRUE 1
 #define FALSE 0
 #define COM_ARGS 10
-char* command[COM_ARGS];
 char* pwd;
 
 
@@ -36,7 +35,7 @@ char* pwd;
 ** Description: initializes variable pointers to NULL
 ** Prerequisites: called in main, pwd doesn't store a path, command is empty
 *****************************************/
-void constructor() {
+void constructor(char* command[]) {
  pwd = NULL;
  int i;
  for ( i = 0; i < COM_ARGS; i++) {
@@ -61,7 +60,7 @@ void catchSIGSTP(int signo) {
 ** Description: Resets arrray up to args count
 ** Prerequisites: called in command function, args contains a valid positive integer
 *****************************************/
-void reset_command(int args) {
+void reset_command(int args, char* command[]) {
   int i;
   for (i = 0; i < args; i++) {
     command[i] = NULL;
@@ -74,7 +73,7 @@ void reset_command(int args) {
 ** Prerequisites: line points to a valid string, command[] is initialized to NULL
 ** Postrequisites: command[] is initialized up to [i],
 *****************************************/
-int line_args(char* line) {
+int line_args(char* line, char* command[]) {
  const char ch[2] = " ";
  int i = 0;
  char* token = strtok(line, ch);
@@ -84,8 +83,8 @@ int line_args(char* line) {
    if (strcmp("&", token) != 0) {
      command[i] = token;
      i++;
-     token = strtok(NULL, ch);
    }
+   token = strtok(NULL, ch);
    //printf("%s\n", token);
  }
  return i;
@@ -97,9 +96,8 @@ int line_args(char* line) {
 ** Prerequisites: line points to a valid string, command[] is initialized to NULL
 ** Postrequisites: command[] is initialized up to [i],
 *****************************************/
-void exec_command(char* line, int bg) {
- int execArgs = line_args(line);
- FILE *fp;
+void exec_command(char* line, int bg, char* command[]) {
+ int execArgs = line_args(line, command);
  int dv;
  int in, out;
  int isRedirect = 0;
@@ -120,7 +118,10 @@ void exec_command(char* line, int bg) {
           exit(1);
         }
         else {
-          dup2(out, 1);
+          if (dup2(out, 1) == -1) {
+            perror(command[i+1]);
+            exit(1);
+          }
           fcntl(out, F_SETFD, FD_CLOEXEC);
           isRedirect = 1;
         }
@@ -134,7 +135,10 @@ void exec_command(char* line, int bg) {
            exit(1);
          }
          else {
-           dup2(in, 0);
+           if (dup2(in, 0) == -1) {
+             perror(command[i+1]);
+             exit(1);
+           }
            fcntl(in, F_SETFD, FD_CLOEXEC);
            isRedirect = 1;
          }
@@ -148,20 +152,27 @@ void exec_command(char* line, int bg) {
        perror("open error");
        exit(1);
      }
-     int err = dup2(dv, 0);
-     if (err == -1) {
+     if (dup2(dv, 0) == -1) {
        perror("dup2");
+       exit(1);
      }
+
      fcntl(dv, F_SETFD, FD_CLOEXEC);
    }
 
    if(isRedirect == 1) {
-     execlp(command[0], command[0], NULL);
-     perror("Exec Failure!\n");
-     exit(1);
+     if (execlp(command[0], command[0], NULL)) {
+       perror(command[0]);
+       exit(1);
+     }
+
    }
    else {
-     execvp(command[0], command);
+     if (execvp(command[0], (char* const*)command)) {
+       perror(command[0]);
+       exit(1);
+     }
+
      perror("Exec Failure!\n");
      exit(1);
    }
@@ -175,14 +186,14 @@ void exec_command(char* line, int bg) {
 ** Prerequisites:
 ** Postrequisites:
 *****************************************/
-char* cd_command(char* line) {
- int cd_valid = line_args(line);
+char* cd_command(char* line, char* command[]) {
+ int cd_valid = line_args(line, command);
  int cd = -5;
  char cwd[PATH_MAX];
  char *ptr;
 
  if ((cd_valid != 1 || cd_valid != 2) && strcmp(command[0], CD) != 0) {
-   reset_command(cd_valid);
+   reset_command(cd_valid, command);
    return NULL;
  }
  char *home = getenv("HOME");
@@ -210,8 +221,8 @@ char* cd_command(char* line) {
 ** Prerequisites:
 ** Postrequisites:
 *****************************************/
-void status_command(char* line, int term_sig, int exit_status) {
-   int st_valid = line_args(line);
+void status_command(char* line, int term_sig, int exit_status, char* command[]) {
+   int st_valid = line_args(line, command);
 
    if (st_valid == 1 && strcmp(command[0], STATUS) == 0) {
 
@@ -222,7 +233,6 @@ void status_command(char* line, int term_sig, int exit_status) {
        printf("terminated by signal %d\n", exit_status);
      }
    }
-   reset_command(st_valid);
   }
 
 
@@ -233,7 +243,6 @@ void status_command(char* line, int term_sig, int exit_status) {
 ** Postrequisites:
 *****************************************/
 int main() {
-  constructor();
   char endOfLine[3];
   char *line = NULL;
   size_t line_size = 256;
@@ -241,6 +250,8 @@ int main() {
   pid_t spawn_pid = -5;
   int sp_child_exit = -5;
   size_t buff_line;
+  char* command[COM_ARGS];
+  constructor(command);
 
   int sp_exit_status = 0;
   int sp_term_signal = 0;
@@ -265,6 +276,7 @@ int main() {
   while(1) {
     bg = FALSE;
     printf(": ");
+    fflush(stdout);
     buff_line = getline(&line, &line_size, stdin);
     line_n = strlen(line);
     memcpy(endOfLine, &line[line_n - 3], 2);
@@ -274,7 +286,7 @@ int main() {
     // Check Line for Built-In Functions And Handlers
 
     if (strncmp(CD, line, 2) == 0) {
-      pwd = cd_command(line);
+      pwd = cd_command(line, command);
     }
 
     else if (strcmp(STATUS, line) == 0) {
@@ -289,7 +301,7 @@ int main() {
         sp_exit_status = -1;
       }
 
-      status_command(line, sp_term_signal, sp_exit_status);
+      status_command(line, sp_term_signal, sp_exit_status, command);
     }
 
     else if (strncmp(COMMENT, line, 1) == 0) {
@@ -325,7 +337,8 @@ int main() {
             SIGINT_action.sa_handler = SIG_DFL;
             sigaction(SIGINT, &SIGINT_action, NULL);
           }
-          exec_command(line, bg);
+          exec_command(line, bg, command);
+          exit(0);
           break;
 
         default:
@@ -335,12 +348,13 @@ int main() {
 
         if (bg == TRUE) {
           printf("background pid is %d\n", spawn_pid);
+          spawn_pid = waitpid(-1, &sp_child_exit, WNOHANG);
         }
         break;
       }
     }
-    reset_command(COM_ARGS);
-    printf("Spawn ID: %d\n", spawn_pid);
+    reset_command(COM_ARGS, command);
+
     while ((spawn_pid = waitpid(-1, &sp_child_exit, WNOHANG)) > 0) {
       printf("background pid %d is done:\n", spawn_pid);
       fflush(stdout);
