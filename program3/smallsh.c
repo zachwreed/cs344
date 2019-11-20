@@ -20,13 +20,14 @@
 #define EXIT "exit"
 #define CD "cd"
 #define STATUS "status"
+#define PID "$$"
 // Arg Flags
 #define COMMENT "#"
 #define BACKGROUND " &"
 // Boolean
 #define TRUE 1
 #define FALSE 0
-#define COM_ARGS 10
+#define COM_ARGS 512
 char* pwd;
 
 
@@ -83,16 +84,16 @@ int line_args(char* line, char* command[]) {
  while (token != NULL) {
    // add token to command array
    if (strcmp("&", token) != 0) {
-     if(strcmp("$$", token) == 0) {
-       pid = getpid();
-       pidS = malloc(6);
-       sprintf(pidS, "%d", pid);
-       command[i] = pidS;
-       free(pidS);
-     }
-     else {
+     // if(strcmp("$$", token) == 0) {
+     //   pid = getpid();
+     //   pidS = malloc(6);
+     //   sprintf(pidS, "%d", pid);
+     //   command[i] = pidS;
+     //   free(pidS);
+     // }
+     // else {
        command[i] = token;
-     }
+     //}
      i++;
    }
    token = strtok(NULL, ch);
@@ -279,6 +280,7 @@ int main() {
   int sp_exit_status = 0;
   int sp_term_signal = 0;
   int bg = FALSE;
+  char* pidS;
 
   struct sigaction SIGINT_action = {0};
   struct sigaction SIGSTP_action = {0};
@@ -310,6 +312,17 @@ int main() {
 
     if (strncmp(CD, line, 2) == 0) {
       pwd = cd_command(line, command);
+    }
+
+    // this needs work ----------------------------------------
+    if (strstr(PID, line) == 0) {
+      char *idx = strstr(line, PID);
+      int pid = getpid();
+      pidS = malloc(6);
+      sprintf(pidS, "%d", pid);
+      strncpy(idx, pidS, 6);
+      puts(line);
+      free(pidS);
     }
 
     else if (strcmp(STATUS, line) == 0) {
