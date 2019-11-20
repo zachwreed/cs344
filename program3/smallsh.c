@@ -76,16 +76,26 @@ void reset_command(int args, char* command[]) {
 int line_args(char* line, char* command[]) {
  const char ch[2] = " ";
  int i = 0;
+ int pid;
+ char* pidS;
  char* token = strtok(line, ch);
 
  while (token != NULL) {
    // add token to command array
    if (strcmp("&", token) != 0) {
-     command[i] = token;
+     if(strcmp("$$", token) == 0) {
+       pid = getpid();
+       pidS = malloc(6);
+       sprintf(pidS, "%d", pid);
+       command[i] = pidS;
+       free(pidS);
+     }
+     else {
+       command[i] = token;
+     }
      i++;
    }
    token = strtok(NULL, ch);
-   //printf("%s\n", token);
  }
  return i;
 }
@@ -221,16 +231,29 @@ char* cd_command(char* line, char* command[]) {
 ** Prerequisites:
 ** Postrequisites:
 *****************************************/
-void status_command(char* line, int term_sig, int exit_status, char* command[]) {
+void status_command(char* line, char* command[], int isBG, int childExit) {
    int st_valid = line_args(line, command);
 
-   if (st_valid == 1 && strcmp(command[0], STATUS) == 0) {
-
-     if (exit_status >= 0 && term_sig < 0) {
-       printf("exit value %d\n", exit_status);
+   if (isBG == TRUE) {
+     if (WIFEXITED(childExit)) {
+       int exitStatus = WEXITSTATUS(childExit);
+       printf("exit value %d\n", exitStatus);
      }
-     if (exit_status < 0 && term_sig >= 0) {
-       printf("terminated by signal %d\n", exit_status);
+     else {
+       int termSig = WTERMSIG(childExit);
+       printf("terminated by signal %d\n", termSig);
+     }
+   }
+   else {
+     if (st_valid == 1 && strcmp(command[0], STATUS) == 0) {
+       if (WIFEXITED(childExit)) {
+         int exitStatus = WEXITSTATUS(childExit);
+         printf("exit value %d\n", exitStatus);
+       }
+       else {
+         int termSig = WTERMSIG(childExit);
+         printf("terminated by signal %d\n", termSig);
+       }
      }
    }
   }
@@ -290,18 +313,7 @@ int main() {
     }
 
     else if (strcmp(STATUS, line) == 0) {
-
-      if (WIFEXITED(sp_child_exit)) {
-        sp_exit_status = WEXITSTATUS(sp_child_exit);
-        sp_term_signal = -1;
-      }
-
-      if (WIFSIGNALED(sp_child_exit)) {
-        sp_term_signal = WTERMSIG(sp_child_exit);
-        sp_exit_status = -1;
-      }
-
-      status_command(line, sp_term_signal, sp_exit_status, command);
+      status_command(line, command, FALSE, sp_child_exit);
     }
 
     else if (strncmp(COMMENT, line, 1) == 0) {
@@ -356,7 +368,8 @@ int main() {
     reset_command(COM_ARGS, command);
 
     while ((spawn_pid = waitpid(-1, &sp_child_exit, WNOHANG)) > 0) {
-      printf("background pid %d is done:\n", spawn_pid);
+      printf("background pid %d is done: ", spawn_pid);
+      status_command(line, command, TRUE, sp_child_exit);
       fflush(stdout);
     }
   }
