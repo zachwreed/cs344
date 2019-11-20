@@ -15,6 +15,7 @@
 #include <sys/wait.h>
 #include <limits.h>
 #include <signal.h>
+#include <math.h>
 
 // Built in commands
 #define EXIT "exit"
@@ -77,23 +78,35 @@ void reset_command(int args, char* command[]) {
 int line_args(char* line, char* command[]) {
  const char ch[2] = " ";
  int i = 0;
+ int iSize;
+ int idx;
  int pid;
  char* pidS;
+ char *idxS;
  char* token = strtok(line, ch);
 
  while (token != NULL) {
    // add token to command array
    if (strcmp("&", token) != 0) {
-     // if(strcmp("$$", token) == 0) {
-     //   pid = getpid();
-     //   pidS = malloc(6);
-     //   sprintf(pidS, "%d", pid);
-     //   command[i] = pidS;
-     //   free(pidS);
-     // }
-     // else {
+     if((idxS = strstr(token, PID)) != NULL) {
+       idx = (int)(idxS - token);
+       pid = getpid();
+       int iSize = floor(log10(abs(pid))) + 1;
+       //printf("PID: %d, Size: %d\n", pid, iSize);
+       pidS = malloc(iSize);
+       sprintf(pidS, "%d", pid);
+       strncpy(idxS, pidS, iSize);
+       int j;
+       for (j = 0; j < iSize; j++) {
+         token[idx] = pidS[j];
+         idx++;
+       }
        command[i] = token;
-     //}
+       free(pidS);
+     }
+     else {
+       command[i] = token;
+     }
      i++;
    }
    token = strtok(NULL, ch);
@@ -312,17 +325,6 @@ int main() {
 
     if (strncmp(CD, line, 2) == 0) {
       pwd = cd_command(line, command);
-    }
-
-    // this needs work ----------------------------------------
-    if (strstr(PID, line) == 0) {
-      char *idx = strstr(line, PID);
-      int pid = getpid();
-      pidS = malloc(6);
-      sprintf(pidS, "%d", pid);
-      strncpy(idx, pidS, 6);
-      puts(line);
-      free(pidS);
     }
 
     else if (strcmp(STATUS, line) == 0) {
