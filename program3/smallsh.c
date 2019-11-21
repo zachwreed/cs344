@@ -30,7 +30,7 @@
 #define FALSE 0
 #define COM_ARGS 512
 char* pwd;
-
+int isBG = TRUE;
 
 /****************************************
 ** Constructor
@@ -46,17 +46,18 @@ void constructor(char* command[]) {
 }
 
 // From lecture
-void catchSIGINT(int signo){
-  const char msg[] = "Entering foreground-only mode (& is now ignored)\n";
-  write(STDOUT_FILENO, msg, 30);
+void catchSIGSTP(int signo){
   fflush(stdout);
-}
-
-void catchSIGSTP(int signo) {
-  fflush(stdout);
-  char* message = "Exiting foreground-only mode\n. \n";
-  write(STDOUT_FILENO, message, 25);
-  fflush(stdout);
+  if (isBG == FALSE) {
+    write(STDOUT_FILENO, "Exiting foreground-only mode\n", 25);
+    isBG = TRUE;
+    fflush(stdout);
+  }
+  else {
+    write(STDOUT_FILENO, "Entering foreground-only mode (& is now ignored)\n", 49);
+    isBG = FALSE;
+    fflush(stdout);
+  }
 }
 
 /****************************************
@@ -296,8 +297,8 @@ int main() {
 
   int sp_exit_status = 0;
   int sp_term_signal = 0;
-  int bg = FALSE;
   char* pidS;
+  int bg;
 
   struct sigaction SIGINT_action = {0};
   struct sigaction SIGSTP_action = {0};
@@ -372,10 +373,9 @@ int main() {
           break;
 
         case 0:
-          if (bg == FALSE) {
             SIGINT_action.sa_handler = SIG_DFL;
             sigaction(SIGINT, &SIGINT_action, NULL);
-          }
+
           exec_command(line, bg, command, args);
           break;
 
