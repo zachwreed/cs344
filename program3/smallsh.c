@@ -120,7 +120,7 @@ int line_args(char* line, char* command[]) {
 
        // copy to command argument
        command[i] = strncat(tokenNP, pidS, idx);
-
+       printf("%s\n", command[i]);
        // free and reset
        free(pidS);
        free(tokenNP);
