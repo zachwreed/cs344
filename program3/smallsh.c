@@ -97,37 +97,43 @@ int line_args(char* line, char* command[]) {
    // add token to command array
    if (strcmp("&", token) != 0) {
      if((idxS = strstr(token, PID)) != NULL) {
-       idx = (int)(idxS - token);
-
-       pid = getpid();
-       // Get string size of pid
-       int iSize = floor(log10(abs(pid))) + 1;
-
-       // allocate space
-       pidS = malloc(iSize);
-       int sNP = strlen(token) - 1;
-       tokenNP = malloc(sNP);
-       // copy pid to pid String var
-       sprintf(pidS, "%d", pid);
-
-       int j = 0;
-       while(token[j] != '$') {
-         tokenNP[j] = token[j];
-         j++;
+       // if standalone "$$"
+       if (strcmp(PID, token) == 0) {
+         pid = getpid();
+         int iSize = floor(log10(abs(pid))) + 1;
+         pidS = malloc(iSize);
+         sprintf(pidS, "%d", pid);
+         strcat(command[i], pidS);
+         pidS = NULL;
        }
-       // set last char value to null
-       tokenNP[j] = '\0';
+       else {
+         idx = (int)(idxS - token);
 
-       // copy to command argument
-       command[i] = strncat(tokenNP, pidS, idx);
-       printf("before free: %s\n", command[i]);
-       // free and reset
-       free(pidS);
-       free(tokenNP);
-       pidS = NULL;
-       tokenNP = NULL;
-       printf("after free: %s\n", command[i]);
+         pid = getpid();
+         // Get string size of pid
+         pid = getpid();
 
+         // allocate space
+         pidS = malloc(iSize);
+         int sNP = strlen(token) - 1;
+         tokenNP = malloc(sNP);
+         // copy pid to pid String var
+         sprintf(pidS, "%d", pid);
+
+         int j = 0;
+         while(token[j] != '$') {
+           tokenNP[j] = token[j];
+           j++;
+         }
+         // set last char value to null
+         tokenNP[j] = '\0';
+
+         // copy to command argument
+         command[i] = strncat(tokenNP, pidS, idx);
+
+         pidS = NULL;
+         tokenNP = NULL;
+       }
      }
      else {
        command[i] = token;
