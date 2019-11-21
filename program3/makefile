@@ -10,7 +10,7 @@ CXX = gcc	#enables gcc as compiler
 
 # Executable output, dependencies, and action ***************************
 smallsh: smallsh.o
-	$(CXX) smallsh.o -o smallsh
+	$(CXX) smallsh.o -o smallsh -lm
 
 #tells compiler to create object without executable when modified
 smallsh.o: smallsh.c
