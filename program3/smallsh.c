@@ -86,6 +86,7 @@ int line_args(char* line, char* command[]) {
  int pid;
  char* pidS = NULL;
  char *idxS = NULL;
+ char* tokenNP = NULL;
 
  char* token = strtok(line, ch);
 
@@ -94,25 +95,35 @@ int line_args(char* line, char* command[]) {
    if (strcmp("&", token) != 0) {
      if((idxS = strstr(token, PID)) != NULL) {
        idx = (int)(idxS - token);
-       //printf("Token = %s, idx = %d\n", token, idx);
 
        pid = getpid();
        int iSize = floor(log10(abs(pid))) + 1;
        //printf("PID: %d, Size: %d\n", pid, iSize);
        pidS = malloc(iSize);
        sprintf(pidS, "%d", pid);
-       strncpy(idxS, pidS, iSize);
-       int j;
 
-       for (j = 0; j < iSize; j++) {
-         token[idx] = pidS[j];
-         idx++;
+       int j = 0;
+       printf("%c\n", token[j]);
+       while(token[j] != '$') {
+         tokenNP[j] = token[j];
+         j++;
        }
-       token[idx] = '\0';
 
-       command[i] = token;
+       command[i] = strncat(tokenNP, pidS, idx);
+
+       // strncpy(idxS, pidS, iSize);
+       // int j;
+       //
+       // for (j = 0; j < iSize; j++) {
+       //   token[idx] = pidS[j];
+       //   idx++;
+       // }
+       // token[idx] = '\0';
+       //
+       // command[i] = token;
        free(pidS);
        pidS = NULL;
+       tokenNP = NULL;
      }
      else {
        command[i] = token;
@@ -372,10 +383,10 @@ int main() {
 
         case 0:
 
-
+          if(bg == FALSE) {
             SIGINT_action.sa_handler = SIG_DFL;
             sigaction(SIGINT, &SIGINT_action, NULL);
-
+          }
           exec_command(line, bg, command, args);
           break;
 
