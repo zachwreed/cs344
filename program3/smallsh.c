@@ -316,8 +316,6 @@ int main() {
   sigfillset(&SIGSTP_action.sa_mask);
   sigaction(SIGTSTP, &SIGSTP_action, NULL);
 
-
-
   while(1) {
     bg = FALSE;
     printf(": ");
@@ -373,6 +371,8 @@ int main() {
           break;
 
         case 0:
+
+
             SIGINT_action.sa_handler = SIG_DFL;
             sigaction(SIGINT, &SIGINT_action, NULL);
 
