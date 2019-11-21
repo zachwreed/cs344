@@ -47,14 +47,16 @@ void constructor(char* command[]) {
 
 // From lecture
 void catchSIGINT(int signo){
-  char* message = "SIGINT. \n";
-  write(STDOUT_FILENO, message, 28);
+  const char msg[] = "Entering foreground-only mode (& is now ignored)\n";
+  write(STDOUT_FILENO, msg, 30);
+  fflush(stdout);
 }
 
 void catchSIGSTP(int signo) {
-  char* message = "SIGSTP. \n";
+  fflush(stdout);
+  char* message = "Exiting foreground-only mode\n. \n";
   write(STDOUT_FILENO, message, 25);
-  _Exit(0);
+  fflush(stdout);
 }
 
 /****************************************
@@ -81,8 +83,9 @@ int line_args(char* line, char* command[]) {
  int iSize;
  int idx;
  int pid;
- char* pidS;
- char *idxS;
+ char* pidS = NULL;
+ char *idxS = NULL;
+
  char* token = strtok(line, ch);
 
  while (token != NULL) {
@@ -90,6 +93,8 @@ int line_args(char* line, char* command[]) {
    if (strcmp("&", token) != 0) {
      if((idxS = strstr(token, PID)) != NULL) {
        idx = (int)(idxS - token);
+       //printf("Token = %s, idx = %d\n", token, idx);
+
        pid = getpid();
        int iSize = floor(log10(abs(pid))) + 1;
        //printf("PID: %d, Size: %d\n", pid, iSize);
@@ -97,18 +102,24 @@ int line_args(char* line, char* command[]) {
        sprintf(pidS, "%d", pid);
        strncpy(idxS, pidS, iSize);
        int j;
+
        for (j = 0; j < iSize; j++) {
          token[idx] = pidS[j];
          idx++;
        }
+       token[idx] = '\0';
+
        command[i] = token;
        free(pidS);
+       pidS = NULL;
      }
      else {
        command[i] = token;
      }
      i++;
    }
+   idxS = NULL;
+   pidS = NULL;
    token = strtok(NULL, ch);
  }
  return i;
@@ -120,8 +131,7 @@ int line_args(char* line, char* command[]) {
 ** Prerequisites: line points to a valid string, command[] is initialized to NULL
 ** Postrequisites: command[] is initialized up to [i],
 *****************************************/
-void exec_command(char* line, int bg, char* command[]) {
- int execArgs = line_args(line, command);
+void exec_command(char* line, int bg, char* command[], int execArgs) {
  int dv;
  int in, out;
  int isRedirect = 0;
@@ -196,9 +206,6 @@ void exec_command(char* line, int bg, char* command[]) {
        perror(command[0]);
        exit(1);
      }
-
-     perror("Exec Failure!\n");
-     exit(1);
    }
  }
  return;
@@ -210,11 +217,9 @@ void exec_command(char* line, int bg, char* command[]) {
 ** Prerequisites:
 ** Postrequisites:
 *****************************************/
-char* cd_command(char* line, char* command[]) {
- int cd_valid = line_args(line, command);
+char* cd_command(char* line, char* command[], int cd_valid) {
  int cd = -5;
  char cwd[PATH_MAX];
- char *ptr;
 
  if ((cd_valid != 1 || cd_valid != 2) && strcmp(command[0], CD) != 0) {
    reset_command(cd_valid, command);
@@ -245,8 +250,7 @@ char* cd_command(char* line, char* command[]) {
 ** Prerequisites:
 ** Postrequisites:
 *****************************************/
-void status_command(char* line, char* command[], int isBG, int childExit) {
-   int st_valid = line_args(line, command);
+void status_command(char* line, char* command[], int st_valid, int isBG, int childExit) {
 
    if (isBG == TRUE) {
      if (WIFEXITED(childExit)) {
@@ -299,11 +303,13 @@ int main() {
   struct sigaction SIGSTP_action = {0};
   struct sigaction SIGIGN_action = {0};
 
+  // Ignore Cntr-C when Signaled
   SIGINT_action.sa_handler = SIG_IGN;
   SIGINT_action.sa_flags = 0;
   sigfillset(&SIGINT_action.sa_mask);
   sigaction(SIGINT, &SIGINT_action, NULL);
 
+  // Redirect Cntr-Z to Function
   SIGSTP_action.sa_handler = catchSIGSTP;
   SIGSTP_action.sa_flags = 0;
   sigfillset(&SIGSTP_action.sa_mask);
@@ -322,13 +328,21 @@ int main() {
     line[strcspn(line, "\n")] = '\0';
 
     // Check Line for Built-In Functions And Handlers
+    int args = 0;
 
     if (strncmp(CD, line, 2) == 0) {
-      pwd = cd_command(line, command);
+      args = line_args(line, command);
+      pwd = cd_command(line, command, args);
     }
 
-    else if (strcmp(STATUS, line) == 0) {
-      status_command(line, command, FALSE, sp_child_exit);
+    else if (strncmp(STATUS, line, 6) == 0) {
+      args = line_args(line, command);
+      if (strcmp(BACKGROUND, endOfLine) != 0) {
+        status_command(line, command, args, FALSE, sp_child_exit);
+      }
+      else {
+        status_command(line, command, args, TRUE, sp_child_exit);
+      }
     }
 
     else if (strncmp(COMMENT, line, 1) == 0) {
@@ -336,7 +350,6 @@ int main() {
     }
 
     else if (line == NULL) {
-      printf("Empty line\n");
       continue;
     }
 
@@ -350,7 +363,7 @@ int main() {
       if (strcmp(BACKGROUND, endOfLine) == 0) {
         bg = TRUE;
       }
-
+      args = line_args(line, command);
       spawn_pid = fork();
       switch(spawn_pid) {
         case -1:
@@ -359,13 +372,11 @@ int main() {
           break;
 
         case 0:
-          fflush(stdout);
           if (bg == FALSE) {
             SIGINT_action.sa_handler = SIG_DFL;
             sigaction(SIGINT, &SIGINT_action, NULL);
           }
-          exec_command(line, bg, command);
-          exit(0);
+          exec_command(line, bg, command, args);
           break;
 
         default:
@@ -384,7 +395,8 @@ int main() {
 
     while ((spawn_pid = waitpid(-1, &sp_child_exit, WNOHANG)) > 0) {
       printf("background pid %d is done: ", spawn_pid);
-      status_command(line, command, TRUE, sp_child_exit);
+      status_command(line, command, args, TRUE, sp_child_exit);
+      reset_command(COM_ARGS, command);
       fflush(stdout);
     }
   }
