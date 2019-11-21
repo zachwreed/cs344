@@ -105,7 +105,7 @@ int line_args(char* line, char* command[]) {
 
        // allocate space
        pidS = malloc(iSize);
-       int sNP = strlen(token) - 2;
+       int sNP = strlen(token) - 1;
        tokenNP = malloc(sNP);
        // copy pid to pid String var
        sprintf(pidS, "%d", pid);
