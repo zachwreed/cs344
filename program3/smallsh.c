@@ -100,28 +100,20 @@ int line_args(char* line, char* command[]) {
        int iSize = floor(log10(abs(pid))) + 1;
        //printf("PID: %d, Size: %d\n", pid, iSize);
        pidS = malloc(iSize);
+       tokenNP = malloc(sizeof(token) - 2);
        sprintf(pidS, "%d", pid);
 
        int j = 0;
-       printf("%c\n", token[j]);
        while(token[j] != '$') {
          tokenNP[j] = token[j];
          j++;
        }
+       //tokenNP[j] = '\0';
 
        command[i] = strncat(tokenNP, pidS, idx);
 
-       // strncpy(idxS, pidS, iSize);
-       // int j;
-       //
-       // for (j = 0; j < iSize; j++) {
-       //   token[idx] = pidS[j];
-       //   idx++;
-       // }
-       // token[idx] = '\0';
-       //
-       // command[i] = token;
        free(pidS);
+       free(tokenNP);
        pidS = NULL;
        tokenNP = NULL;
      }
@@ -134,6 +126,11 @@ int line_args(char* line, char* command[]) {
    pidS = NULL;
    token = strtok(NULL, ch);
  }
+ int j;
+ // for (j = 0; j < 2; j++){
+ //   printf("%s ", command[j]);
+ // }
+ // printf("\n");
  return i;
 }
 
