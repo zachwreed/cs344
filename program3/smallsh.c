@@ -52,7 +52,7 @@ void constructor(char* command[]) {
 void catchSIGSTP(int signo){
   fflush(stdout);
   if (isBG == FALSE) {
-    write(STDOUT_FILENO, "Exiting foreground-only mode\n", 25);
+    write(STDOUT_FILENO, "Exiting foreground-only mode\n", 29);
     isBG = TRUE;
     fflush(stdout);
   }
