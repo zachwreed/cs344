@@ -103,7 +103,7 @@ int line_args(char* line, char* command[]) {
          int iSize = floor(log10(abs(pid))) + 1;
          pidS = malloc(iSize);
          sprintf(pidS, "%d", pid);
-         strcat(command[i], pidS);
+         command[i] = pidS;
          pidS = NULL;
        }
        else {
