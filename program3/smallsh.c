@@ -45,7 +45,10 @@ void constructor(char* command[]) {
  }
 }
 
-// From lecture
+/****************************************
+** Catch Signal Stop
+** Description: Prevents ^Z execution, handling foreground/background switch
+*****************************************/
 void catchSIGSTP(int signo){
   fflush(stdout);
   if (isBG == FALSE) {
@@ -97,10 +100,14 @@ int line_args(char* line, char* command[]) {
        idx = (int)(idxS - token);
 
        pid = getpid();
+       // Get string size of pid
        int iSize = floor(log10(abs(pid))) + 1;
-       //printf("PID: %d, Size: %d\n", pid, iSize);
+
+       // allocate space
        pidS = malloc(iSize);
-       tokenNP = malloc(sizeof(token) - 2);
+       int sNP = strlen(token) - 2;
+       tokenNP = malloc(sNP);
+       // copy pid to pid String var
        sprintf(pidS, "%d", pid);
 
        int j = 0;
@@ -108,10 +115,13 @@ int line_args(char* line, char* command[]) {
          tokenNP[j] = token[j];
          j++;
        }
-       //tokenNP[j] = '\0';
+       // set last char value to null
+       tokenNP[j] = '\0';
 
+       // copy to command argument
        command[i] = strncat(tokenNP, pidS, idx);
 
+       // free and reset
        free(pidS);
        free(tokenNP);
        pidS = NULL;
@@ -122,15 +132,8 @@ int line_args(char* line, char* command[]) {
      }
      i++;
    }
-   idxS = NULL;
-   pidS = NULL;
    token = strtok(NULL, ch);
  }
- int j;
- // for (j = 0; j < 2; j++){
- //   printf("%s ", command[j]);
- // }
- // printf("\n");
  return i;
 }
 
@@ -147,11 +150,15 @@ void exec_command(char* line, int bg, char* command[], int execArgs) {
 
  if (execArgs >= 1) {
    // command [arg1 arg2 ...] [< input_file] [> output_file] [&]
-
    if (execArgs > 1) {
      int i;
+     //************************************************
+     // Loop through each argument value
+     //************************************************
      for (i = 0; i < execArgs; i++) {
-       // if redirect stdout
+       //******************************
+       // if redirect stdout to a file
+       //******************************
        if (strcmp(">", command[i]) == 0 && command[i] != NULL && i != 0 && i != execArgs -1) {
         //printf("%s\n", command[i + 1]);
         out = open(command[i+1], O_WRONLY | O_TRUNC | O_CREAT, 0644);
@@ -165,11 +172,14 @@ void exec_command(char* line, int bg, char* command[], int execArgs) {
             perror(command[i+1]);
             exit(1);
           }
+          // Set file to be closed on execution
           fcntl(out, F_SETFD, FD_CLOEXEC);
           isRedirect = 1;
         }
        }
-       // if redirect stdin
+       //******************************
+       // if redirect stdin to a file
+       //******************************
        else if (strcmp("<", command[i]) == 0 && command[i] != NULL && i != 0 && i != execArgs -1) {
          in = open(command[i+1], O_RDONLY);
 
@@ -182,13 +192,14 @@ void exec_command(char* line, int bg, char* command[], int execArgs) {
              perror(command[i+1]);
              exit(1);
            }
+           // Set file to be closed on execution
            fcntl(in, F_SETFD, FD_CLOEXEC);
            isRedirect = 1;
          }
        }
      }
    }
-
+   // If background is true, send output to dev null
    if (bg == TRUE && isRedirect == 0) {
      dv = open("/dev/null", O_RDONLY);
      if (dv < 0) {
@@ -199,17 +210,18 @@ void exec_command(char* line, int bg, char* command[], int execArgs) {
        perror("dup2");
        exit(1);
      }
-
+     // Set file to be closed on execution
      fcntl(dv, F_SETFD, FD_CLOEXEC);
    }
 
+   // IF file redirect is specified, use execlp.
    if(isRedirect == 1) {
      if (execlp(command[0], command[0], NULL)) {
        perror(command[0]);
        exit(1);
      }
-
    }
+   // Otherwise, call execvp with all args
    else {
      if (execvp(command[0], (char* const*)command)) {
        perror(command[0]);
@@ -255,12 +267,13 @@ char* cd_command(char* line, char* command[], int cd_valid) {
 
 /****************************************
 ** Status Command
-** Description:
-** Prerequisites:
-** Postrequisites:
+** Description: prints out either the exit status or terminating signal of a child process.
+** Prerequisites: fork() has been called by a non-built in function. command[] contians a valid array
+** Postrequisites: line printed to stdout
 *****************************************/
 void status_command(char* line, char* command[], int st_valid, int isBG, int childExit) {
 
+  // Called from WNOHANG, don't check command arguments
    if (isBG == TRUE) {
      if (WIFEXITED(childExit)) {
        int exitStatus = WEXITSTATUS(childExit);
@@ -271,6 +284,7 @@ void status_command(char* line, char* command[], int st_valid, int isBG, int chi
        printf("terminated by signal %d\n", termSig);
      }
    }
+   // Check command arguments for validity
    else {
      if (st_valid == 1 && strcmp(command[0], STATUS) == 0) {
        if (WIFEXITED(childExit)) {
@@ -285,32 +299,38 @@ void status_command(char* line, char* command[], int st_valid, int isBG, int chi
    }
   }
 
-
 /****************************************
 ** Main
-** Description: Initializes variables and handles command line loop, calls functions when passed.
+** Description: Initializes variables and handles command line loop, calls respective functions based on input.
 ** Prerequisites: None
-** Postrequisites:
+** Postrequisites: None
 *****************************************/
 int main() {
+
+  // Getline Variables
   char endOfLine[3];
   char *line = NULL;
   size_t line_size = 256;
   size_t line_n;
-  pid_t spawn_pid = -5;
-  int sp_child_exit = -5;
   size_t buff_line;
+
+  // holds parsed stdin commands
   char* command[COM_ARGS];
+  int args;
+  // initialize command[] to NULL
   constructor(command);
 
+  // Spawn Variables
+  pid_t spawn_pid = -5;
+  int sp_child_exit = -5;
   int sp_exit_status = 0;
   int sp_term_signal = 0;
-  char* pidS;
   int bg;
 
+
+  // Define signal objects
   struct sigaction SIGINT_action = {0};
   struct sigaction SIGSTP_action = {0};
-  struct sigaction SIGIGN_action = {0};
 
   // Ignore Cntr-C when Signaled
   SIGINT_action.sa_handler = SIG_IGN;
@@ -324,26 +344,42 @@ int main() {
   sigfillset(&SIGSTP_action.sa_mask);
   sigaction(SIGTSTP, &SIGSTP_action, NULL);
 
+  /************************************
+  ** Main loop handling function calls
+  ************************************/
+
   while(1) {
+    // reset values
     bg = FALSE;
+    args = 0;
+
+    // Get line from stdin
     printf(": ");
     fflush(stdout);
     buff_line = getline(&line, &line_size, stdin);
     line_n = strlen(line);
+
+    // Get last 2 chars to check for " &"
     memcpy(endOfLine, &line[line_n - 3], 2);
     endOfLine[2] = '\0';
     line[strcspn(line, "\n")] = '\0';
 
     // Check Line for Built-In Functions And Handlers
-    int args = 0;
 
+    /***************************
+    ** Call Change Directory Built-In Command
+    ****************************/
     if (strncmp(CD, line, 2) == 0) {
       args = line_args(line, command);
       pwd = cd_command(line, command, args);
     }
 
+    /***************************
+    ** Call Status Built-In Command
+    ****************************/
     else if (strncmp(STATUS, line, 6) == 0) {
       args = line_args(line, command);
+      // if background command not present
       if (strcmp(BACKGROUND, endOfLine) != 0) {
         status_command(line, command, args, FALSE, sp_child_exit);
       }
@@ -352,46 +388,73 @@ int main() {
       }
     }
 
+    /***************************
+    ** IF comment, continue
+    ****************************/
     else if (strncmp(COMMENT, line, 1) == 0) {
       continue;
     }
 
+    /***************************
+    ** If NULL, continue
+    ****************************/
     else if (line == NULL) {
       continue;
     }
 
+    /***************************
+    ** If exit, end program
+    ****************************/
     else if (strcmp(EXIT, line) == 0) {
       exit(0);
       break;
     }
 
-    // If Non-build in command
+    /***************************
+    ** CAll Exec() family command
+    ****************************/
     else {
+      // Set Background before fork
       if (strcmp(BACKGROUND, endOfLine) == 0) {
         bg = TRUE;
       }
+
+      // read line into command array
       args = line_args(line, command);
+      // Spawn Fork
       spawn_pid = fork();
+
+      /*********************
+       ** Switch for pid
+       ** From lecture 3.1
+      *********************/
       switch(spawn_pid) {
+        // IF error
         case -1:
           perror("Hull Breach!\n");
           exit(1);
           break;
 
+        // IF Child Process
         case 0:
-
+          // Set sigAction Default for if only foreground
           if(bg == FALSE) {
             SIGINT_action.sa_handler = SIG_DFL;
             sigaction(SIGINT, &SIGINT_action, NULL);
           }
+          // Call exec with commands if Child
           exec_command(line, bg, command, args);
+          exit(0);
           break;
 
+        // If parent Process
         default:
+        // Wait if Child is in foreground
         if (bg == FALSE) {
           waitpid(spawn_pid, &sp_child_exit, 0);
         }
 
+        // Continue if Child is in background
         if (bg == TRUE) {
           printf("background pid is %d\n", spawn_pid);
           spawn_pid = waitpid(-1, &sp_child_exit, WNOHANG);
@@ -399,8 +462,11 @@ int main() {
         break;
       }
     }
+    // Set command back to args
     reset_command(COM_ARGS, command);
 
+    // Check to see if a child processes has exited
+    // If so, flush stdout from child exec()
     while ((spawn_pid = waitpid(-1, &sp_child_exit, WNOHANG)) > 0) {
       printf("background pid %d is done: ", spawn_pid);
       status_command(line, command, args, TRUE, sp_child_exit);
