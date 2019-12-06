@@ -25,35 +25,6 @@ void error(const char *msg, int status) {
 	exit(status);
 }
 
-void encryptBuf(char *key, char *text) {
-	int i, c, t, k;
-	char cipher[CHARMAX];
-	memset(cipher, '\0', CHARMAX);
-
-	for (i = 0; i < strlen(text); i++) {
-		t = text[i] - 65;
-		k = key[i] - 65;
-		if ( k == -33) {
-			k = 26;
-		}
-		if (t == -33) {
-			t = 26;
-		}
-		c = t + k;
-		if (c > 26) {
-			c = c - 26;
-		}
-		if (c == 26) {
-			c = 32;
-		}
-		else {
-			c += 65;
-		}
-		cipher[i] = c;
-	}
-	printf("\n\nCipher: %s\n\n", cipher);
-}
-
 int main(int argc, char *argv[]) {
 	int socketFD;				// socket file descriptor
 	int portNumber;			// port of otp_enc_d process
@@ -127,8 +98,10 @@ int main(int argc, char *argv[]) {
 	fgets(keyBuf, sizeof(keyBuf) - 1, keyF); // Get input from the user, trunc to buffer - 1 chars, leaving \0
 	//keyBuf[strcspn(keyBuf, "\n")] = '\0'; 		// Remove the trailing \n that fgets adds
 
-
-	encryptBuf(keyBuf, textBuf);
+	// char cipher[CHARMAX];
+	// memset(cipher, '\0', CHARMAX);
+	// encryptBuf(keyBuf, textBuf, cipher);
+	// printf("Cipher: %s\n", cipher);
 
 	if (strlen(keyBuf) < (strlen(textBuf) + 1)) {
 		error("Error: key is too short", 1);

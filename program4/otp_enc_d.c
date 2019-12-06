@@ -12,8 +12,25 @@
 // Boolean
 #define TRUE 1
 #define FALSE 0
-#define CHARRMAX 65535
+#define CHARMAX 65535
 #define CHARBYTE 6
+
+
+void encryptBuf(char *key, char *text, char *cipher) {
+	int i, c, t, k;
+	for (i = 0; i < strlen(text); i++) {
+		t = text[i] - 65;				// Adjust text char to 0-26
+		k = key[i] - 65;				// Adjust key char to 0-26
+		if (k == -33) {k = 26;}	// If newline val from 26 - 65
+		if (t == -33) {t = 26;}
+		c = t + k;							// Add key and text value together
+		if (c > 26) {c -= 26;}	// If higher than 26, modulo
+		if (c == 26) {c = 32;}	// If equal to newline value
+		else {c += 65;}					// Else add back 65 to get ASCII values
+		cipher[i] = c;					// read to array
+	}
+}
+
 // Error function used for reporting issues
 void error(const char *msg) {
 	perror(msg);
@@ -33,10 +50,11 @@ int main(int argc, char *argv[])
 	int keyRead;
 	int textPos;
 	int ktSize;								// stores keyBuf + textBuf recv() size
-	char buffer[CHARRMAX];			// store all recv() data
-	char textBuf[CHARRMAX];			// stores text buffer
-	char keyBuf[CHARRMAX];				// stores key buffer
-	char buffByte[CHARBYTE];
+	char buffer[CHARMAX];			// store all recv() data
+	char cipher[CHARMAX];			// store ciphertext
+	char textBuf[CHARMAX];		// stores text buffer
+	char keyBuf[CHARMAX];			// stores key buffer
+	char buffByte[CHARBYTE];	// stores key buffer size from client
 
 	socklen_t sizeOfClientInfo;
 	struct sockaddr_in serverAddress;
@@ -104,12 +122,12 @@ int main(int argc, char *argv[])
 				}
 
 				// Get the message from the client and display it
-				memset(buffer, '\0', CHARRMAX);
+				memset(buffer, '\0', CHARMAX);
 				int totalChar;
 				int idx;
 				while(1) {
 					// receive file
-					charsRead = recv(establishedConnectionFD, buffer, CHARRMAX, 0);
+					charsRead = recv(establishedConnectionFD, buffer, CHARMAX, 0);
 					if (charsRead < 0) {
 						error("ERROR reading from socket");
 					}
@@ -123,22 +141,24 @@ int main(int argc, char *argv[])
 					if (totalChar == ktSize && keyRead == TRUE) {
 						break;
 					}
-					printf("in while");
 				}
 
 				/************************
 				** Parse Key-Text Buffer
 				*************************/
-				memset(keyBuf, '\0', CHARRMAX);
-				memset(textBuf, '\0', CHARRMAX);
+				memset(keyBuf, '\0', CHARMAX);
+				memset(textBuf, '\0', CHARMAX);
 				memcpy(keyBuf, &buffer[0], textPos);
 				memcpy(textBuf, &buffer[textPos + 1], strlen(buffer));
 				printf("SERVER: keyBuf= %s\n", keyBuf);
 				printf("SERVER: texBuf= %s\n", textBuf);
 
+				memset(cipher, '\0', CHARMAX);
+				encryptBuf(keyBuf, textBuf, cipher);
+				printf("SERVER: cipher= %s\n", cipher);
 				//while (1) {} read line
 				// Send a Success message back to the client
-				charsRead = send(establishedConnectionFD, "I am the server, and I got your message", 39, 0); // Send success back
+				charsRead = send(establishedConnectionFD, cipher, strlen(cipher), 0); // Send success back
 				if (charsRead < 0) {
 					error("ERROR writing to socket");
 				}
