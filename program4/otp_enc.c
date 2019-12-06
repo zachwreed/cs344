@@ -8,15 +8,50 @@
 #include <netdb.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
 // Boolean
 #define TRUE 1
 #define FALSE 0
+#define CHARMAX 65535
+#define CHARBYTE 10
 
 // Error function used for reporting issues
 // change to error(msg, exit status) later -------------------------------------
-void error(const char *msg) {
+void error(const char *msg, int status) {
 	perror(msg);
-	exit(0);
+	exit(status);
+}
+
+void encryptBuf(char *key, char *text) {
+	int i, c, t, k;
+	char cipher[CHARMAX];
+	memset(cipher, '\0', CHARMAX);
+
+	for (i = 0; i < strlen(text); i++) {
+		t = text[i] - 65;
+		k = key[i] - 65;
+		if ( k == -33) {
+			k = 26;
+		}
+		if (t == -33) {
+			t = 26;
+		}
+		c = t + k;
+		if (c > 26) {
+			c = c - 26;
+		}
+		if (c == 26) {
+			c = 32;
+		}
+		else {
+			c += 65;
+		}
+		cipher[i] = c;
+	}
+	printf("\n\nCipher: %s\n\n", cipher);
 }
 
 int main(int argc, char *argv[]) {
@@ -32,13 +67,16 @@ int main(int argc, char *argv[]) {
 	int outFile = -1; 	// holds stdout redirect file
 	int outDup = -1;		// holds dup2 return
 
-	FILE *keyF = NULL; 	// holds stdin key file
-	FILE *textF = NULL; // holds stdin text fileIn
-
+	FILE *keyF = NULL; 				// holds stdin key file
+	FILE *textF = NULL; 			// holds stdin text fileIn
+	char keyBuf[CHARMAX];		// holds buffer for keyfile
+	char textBuf[CHARMAX];		// holds buffer for textfile
+	char ktBuf[CHARBYTE];
+	char buffer[CHARMAX];		// char array used for recv otp_enc_d
+	long ktSize;								// int to hold size of key and text combined
 
 	struct sockaddr_in serverAddress;		// Holds address of otp_enc_d process plus settings
 	struct hostent* serverHostInfo;			// Holds hostname from args
-	char buffer[256];										// char array used for receiving from otp_enc_d
 
 	/******************************
 	** Check Args
@@ -54,7 +92,7 @@ int main(int argc, char *argv[]) {
 		if (strcmp(argv[i], ">") == 0) {
 			// if redirection is in range
 			if (i != (argc - 1) && i != 0) {
-				error("input contains bad characters");
+				error("input contains bad characters", 1);
 			}
 			else {
 				isRd = TRUE;
@@ -68,21 +106,38 @@ int main(int argc, char *argv[]) {
 		// Open outFile from argv
 		outFile = open(argv[isRdIdx], O_WRONLY | O_TRUNC | O_CREAT, 0644);
 		if (outFile < 0) {
-			error(argv[isRdIdx]);
+			error(argv[isRdIdx], 1);
 		}
 		// Redirect stdout to outFile
 		outDup = dup2(outFile, 0);
 		if (outDup < 0) {
-			error("open error");
+			error("open error", 1);
 		}
 	}
 
-	// Open Stdin File
+	// Open Plain Text Stdin Files
 	textF = fopen(argv[1], "r");
-	memset(buffer, '\0', sizeof(buffer)); 		// Clear out the buffer array
-	fgets(buffer, sizeof(buffer) - 1, textF); // Get input from the user, trunc to buffer - 1 chars, leaving \0
-	buffer[strcspn(buffer, "\n")] = '\0'; 		// Remove the trailing \n that fgets adds
+	memset(textBuf, '\0', sizeof(textBuf)); 		// Clear out the buffer array
+	fgets(textBuf, sizeof(textBuf) - 1, textF); // Get input from the user, trunc to buffer - 1 chars, leaving \0
+	textBuf[strcspn(textBuf, "\n")] = '\0'; 		// Remove the trailing \n that fgets adds
 
+	// Open Key Stdin File
+	keyF = fopen(argv[2], "r");
+	memset(keyBuf, '\0', sizeof(keyBuf)); 		// Clear out the buffer array
+	fgets(keyBuf, sizeof(keyBuf) - 1, keyF); // Get input from the user, trunc to buffer - 1 chars, leaving \0
+	//keyBuf[strcspn(keyBuf, "\n")] = '\0'; 		// Remove the trailing \n that fgets adds
+
+
+	encryptBuf(keyBuf, textBuf);
+
+	if (strlen(keyBuf) < (strlen(textBuf) + 1)) {
+		error("Error: key is too short", 1);
+	}
+	// Get size of key + text file
+	memset(ktBuf, '\0', sizeof(ktBuf));					// Clear out the buffer array
+	ktSize = strlen(keyBuf) + strlen(textBuf);	// Get size of key & text buffer
+	sprintf(ktBuf, "%ld", ktSize);							// Copy long value to key-text buffer
+	ktBuf[ktSize - 1] = '\n';										// Set Last Char to newline for server to catch
 
 	memset((char*)&serverAddress, '\0', sizeof(serverAddress)); // Clear out the address struct
 	portNumber = atoi(argv[3]); 									// Get the port number, convert to an integer
@@ -91,9 +146,7 @@ int main(int argc, char *argv[]) {
 	serverAddress.sin_port = htons(portNumber);		// Store the port number
 
 	if (serverHostInfo == NULL) {
-		fprintf(stderr, "CLIENT: ERROR, no such host\n");
-		exit(0);
-
+		error("otp_enc error: could not resolve serverHostInfo", 1);
 	}
 	 // Copy in the address memcpy(destination, source, size_t)
 	memcpy((char*)&serverAddress.sin_addr.s_addr, (char*)serverHostInfo->h_addr, serverHostInfo->h_length);
@@ -105,8 +158,9 @@ int main(int argc, char *argv[]) {
  	** type = UPD or TCP
 	****************************/
 	socketFD = socket(AF_INET, SOCK_STREAM, 0); // Create the socket
-	if (socketFD < 0) error("CLIENT: ERROR opening socket");
-
+	if (socketFD < 0) {
+		error("opt_enc error: could not create socket", 1);
+	}
 	/***************************
 	**  Connect socket to server address
 	** int <0 success, -1 failure> connect(int sockedFD, cast otp_enc_d &address, size_t otp_enc_d address)
@@ -114,20 +168,59 @@ int main(int argc, char *argv[]) {
 	** type = UPD or TCP
 	****************************/
 	if (connect(socketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0) {
-		error("CLIENT: ERROR connecting");
+		error("otp_enc error: could not contact otp_enc on port", 1);
 	}
 
 	/***************************
 	** Send Data to otp_enc_d process
 	** size_t <bytes sent> send(int sockedFD, message, message size_t, int flags)
 	****************************/
-	charsWritten = send(socketFD, buffer, strlen(buffer), 0); 	// Write to the server
+
+	/********************
+	** Send Key-Text Size Buffer
+	*********************/
+	charsWritten = send(socketFD, ktBuf, strlen(ktBuf), 0);
 	if (charsWritten < 0) {
-		error("CLIENT: ERROR writing to socket");
+		error("CLIENT: ERROR writing to socket", 1);
+	}
+	// block until all data is sent
+	while (charsWritten < strlen(ktBuf)) {
+		charsWritten = send(socketFD, ktBuf, strlen(ktBuf), 0);
 	}
 
-	if (charsWritten < strlen(buffer)) {
-		printf("CLIENT: WARNING: Not all data written to socket!\n");
+	/*******************
+	** Receive confirmation from Server
+	*******************/
+	memset(buffer, '\0', sizeof(buffer)); // Clear out the buffer again for reuse
+	charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); // Read data leaving \0 at end
+	if (charsRead < 0) {
+		error("CLIENT: ERROR reading from socket", 1);
+	}
+	printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
+	memset(buffer, '\0', sizeof(buffer)); // Clear out the buffer again for reuse
+
+	/********************
+	** Send Key Buffer
+	*********************/
+	charsWritten = send(socketFD, keyBuf, strlen(keyBuf), 0);
+	if (charsWritten < 0) {
+		error("CLIENT: ERROR writing to socket", 1);
+	}
+	// block until all data is sent
+	while (charsWritten < strlen(keyBuf)) {
+		charsWritten = send(socketFD, keyBuf, strlen(keyBuf), 0);
+	}
+
+	/********************
+	** Send Text Buffer
+	*********************/
+	charsWritten = send(socketFD, textBuf, strlen(textBuf), 0);
+	if (charsWritten < 0) {
+		error("CLIENT: ERROR writing to socket", 1);
+	}
+	// block until all data is sent
+	while (charsWritten < strlen(textBuf)) {
+		charsWritten = send(socketFD, textBuf, strlen(textBuf), 0);
 	}
 
 	// Get return message from server
@@ -139,7 +232,7 @@ int main(int argc, char *argv[]) {
 	****************************/
 	charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); // Read data leaving \0 at end
 	if (charsRead < 0) {
-		error("CLIENT: ERROR reading from socket");
+		error("CLIENT: ERROR reading from socket", 1);
 	}
 
 	printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
