@@ -10,6 +10,7 @@ int main(int argc, char* argv[]) {
     printf("Error: No keygen size specified");
     return 1;
   }
+  
   // refer ASCII values at https://www.cs.cmu.edu/~pattis/15-1XX/common/handouts/ascii.html
   time_t t;
   srand((unsigned) time(&t));
