@@ -10,7 +10,7 @@ int main(int argc, char* argv[]) {
     printf("Error: No keygen size specified");
     return 1;
   }
-  
+
   // refer ASCII values at https://www.cs.cmu.edu/~pattis/15-1XX/common/handouts/ascii.html
   time_t t;
   srand((unsigned) time(&t));
@@ -21,7 +21,6 @@ int main(int argc, char* argv[]) {
     v = rand() % (26 - 0 + 1); //range of 0 - 26
     str[i] = pad[v];
   }
-  str[keyS - 1] = 10;
-  printf("%s", str);
+  printf("%s\n", str);
   return 0;
 }
