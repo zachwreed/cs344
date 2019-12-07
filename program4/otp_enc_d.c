@@ -20,14 +20,13 @@ void encryptBuf(char *key, char *text, char *cipher) {
 	int i, c, t, k;
 
 	for (i = 0; i < strlen(text) - 1; i++) {
-		t = text[i] - 65;				// Adjust text char to 0-26
-		k = key[i] - 65;				// Adjust key char to 0-26
-		if (k == -33) {k = 26;}	// If newline val from 26 - 65
-		if (t == -33) {t = 26;}
-		c = t + k;							// Add key and text value together
-		if (c > 26) {c -= 26;}	// If higher than 26, modulo
-		if (c == 26) {c = 32;}	// If equal to newline value
-		else {c += 65;}					// Else add back 65 to get ASCII values
+		t = text[i] - 64;				// Adjust text char to 0-26
+		k = key[i] - 64;				// Adjust key char to 0-26
+		if (k == -32) {k = 0;}	// If newline val from 26 - 65
+		if (t == -32) {t = 0;}
+		c = (t + k) % 27;							// Add key and text value together
+		if (c == 0) {c = 32;}	// If equal to newline value
+		else {c += 64;}					// Else add back 65 to get ASCII values
 		cipher[i] = c;					// read to array
 	}
 	cipher[i + 1] = '\n';
@@ -175,7 +174,7 @@ int main(int argc, char *argv[]) {
 				memset(keyBuf, '\0', CHARMAX); 																		// Clear out the buffer again for reuse
 				charsRead = recvMsgChar(establishedConnectionFD, keyBuf, CHARMAX, keySize, 0);	// Receive key from otp_enc
 				charsWritten = sendMSG(establishedConnectionFD, encStr, 0);				// SEnd text to otp_enc_d
-				printf("SERVER: key size: %d, keyBuf size: %lu\n", keySize, strlen(keyBuf));
+				// printf("SERVER: key size: %d, keyBuf size: %lu\n", keySize, strlen(keyBuf));
 				/*****************************
 				** Receive text size from otp_enc
 				******************************/
@@ -189,11 +188,11 @@ int main(int argc, char *argv[]) {
 				******************************/
 				memset(textBuf, '\0', CHARMAX);																// Clear out the textBuf for reuse
 				charsRead = recvMsgChar(establishedConnectionFD, textBuf, CHARMAX, textSize, 0);			// Receive plain text from otp_enc
-				printf("SERVER: text size: %d, textBuf size: %lu\n", textSize, strlen(textBuf));
+				// printf("SERVER: text size: %d, textBuf size: %lu\n", textSize, strlen(textBuf));
 				encryptBuf(keyBuf, textBuf, cipher);													// Encrypt ciphertext
 
 				// printf("SERVER: texBuf= %s\n", textBuf);
-				printf("SERVER: cipher size= %lu\n", strlen(cipher));
+				// printf("SERVER: cipher size= %lu\n", strlen(cipher));
 				// printf("SERVER: keyBuf= %s\n", keyBuf);
 				charsWritten = sendMSG(establishedConnectionFD, cipher, 0); 	// Send ciphertext back
 
@@ -207,7 +206,6 @@ int main(int argc, char *argv[]) {
 		}
 
 		while ((spawnPid = waitpid(-1, &spChildExit, WNOHANG)) > 0) {
-			printf("background pid %d is done: ", spawnPid);
 			fflush(stdout);
 		}
 		//printf("after switch, pid = %d\n", spawnPid);

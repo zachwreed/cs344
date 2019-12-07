@@ -82,9 +82,9 @@ int main(int argc, char *argv[]) {
 	int outFile = -1; 	// holds stdout redirect file
 	int outDup = -1;		// holds dup2 return
 
-	char* encStr = "otp_enc\n";
+	char* encStr = "otp_dec\n";
 
-	char* encdStr = "otp_enc_d\n";
+	char* encdStr = "otp_dec_d\n";
 	// strcat(encStr, "\n");
 	// strcat(encdStr, "\n");
 
