@@ -18,27 +18,38 @@
 #define CHARMAX 70000
 #define CHARBYTE 10
 
-// Error function used for reporting issues
-// change to error(msg, exit status) later -------------------------------------
+/***********************************************
+** Function: Error Handler
+** Description: Sends message to stderr and exits with status
+************************************************/
 void error(const char *msg, int status) {
 	perror(msg);
 	exit(status);
 }
-
+/***********************************************
+** Function: Receive Message
+** Descripton: Receives confirmation or buffer size of key/decrypted text from otp_dec_d
+** Prerequisite: buffer is memset to null, bSize contains positive integer, flag contains positive integer. Called within child of spawnPid
+************************************************/
 int recvMsg(int connectionFD, char* buffer, int bSize, int flag) {
 	int charsRead, charsTotal = 0;
-
+	// While buffer doesn't contain endline
 	while(!strcspn(buffer, "\n")) {
 		charsRead = recv(connectionFD, buffer + charsTotal, bSize, flag);
 		if (charsRead <= 0) {
 			error("ERROR reading from socket", 1);
 			break;
 		}
-		charsTotal += charsRead;
+		charsTotal += charsRead;	// add to offset next receive
 	}
 	return charsTotal;
 }
 
+/***********************************************
+** Function: Receive Message Character
+** Descripton: Receives buffer of key/decrypted text and loops for msgChars from textSize
+** Prerequisite: buffer is memset to null. bSize, msgChars, flag must contain positive integers. Called within child of spawnPid, recvMsg() must be called prior to set size of msgChars
+************************************************/
 int recvMsgChar(int connectionFD, char* buffer, int bSize, int msgChars, int flag) {
 	int charsRead, charsTotal = 0;
 	while(charsTotal < msgChars) {
@@ -47,11 +58,16 @@ int recvMsgChar(int connectionFD, char* buffer, int bSize, int msgChars, int fla
 			error("SERVER: ERROR reading from socket", 1);
 			break;
 		}
-		charsTotal += charsRead;
+		charsTotal += charsRead;	// add to offset next receive
 	}
 	return charsTotal;
 }
 
+/***********************************************
+** Function: Send Message
+** Descripton: Sends confirmation/key/ciphertext to otp_dec_d
+** Prerequisite: buffer is memset to null, bSize contains positive integer, flag contains positive integer. Called within child of spawnPid
+************************************************/
 int sendMsg(int connectionFD, char* buffer, int flag) {
 	int charsWritten, charsTotal = 0;
 	// block until all data is sent
@@ -64,19 +80,22 @@ int sendMsg(int connectionFD, char* buffer, int flag) {
 		if (charsWritten == 0) {
 			break;
 		}
-		charsTotal += charsWritten;
+		charsTotal += charsWritten; // add to offset next send
 	}
 	return charsTotal;
 }
 
+/***********************************************
+** Function: Main
+** Prerequisite: args[] contains:
+**   {command, ciphertext, key, port, optional ">", optional redirect file}
+************************************************/
 int main(int argc, char *argv[]) {
 	int socketFD;				// socket file descriptor
 	int portNumber;			// port of otp_enc_d process
 	int charsWritten;		// char[] size sent to otp_enc_d process
 	int charsRead;			// char[] size received from otp_enc_d response
-	int argValid;				// return from check_args
 
-	int isBG = FALSE;		// is background
 	int isRd = FALSE;		// is file redirect
 	int isRdIdx = -1;		// index of argv[] where file will be redirected
 	int outFile = -1; 	// holds stdout redirect file
@@ -84,24 +103,14 @@ int main(int argc, char *argv[]) {
 
 	char* encStr = "otp_dec\n";
 
-	char* encdStr = "otp_dec_d\n";
-	// strcat(encStr, "\n");
-	// strcat(encdStr, "\n");
-
-
-	// printf("CLIENT Declaration: %s\n", encStr);
-	// printf("CLIENT Declaration: %s\n", encdStr);
-
 	FILE *keyF = NULL; 				// holds stdin key file
 	FILE *textF = NULL; 			// holds stdin text fileIn
-	//char ktBuf[CHARBYTE];
 	char keyBuf[CHARMAX];			// holds buffer for keyfile
 	char textBuf[CHARMAX];		// holds buffer for textfile
+	int textSize;							// used for size of ciphertext
 	char kSizeBuf[CHARBYTE];	// holds buffer for key size data
 	char tSizeBuf[CHARBYTE];	// holds buffer for text size data
-	char buffer[CHARMAX];			// char array used for recv otp_enc_d
-	long ktSize;							// int to hold size of key and text combined
-	int textSize;
+	char buffer[CHARMAX];			// char array used for recv otp_dec_d
 
 	struct sockaddr_in serverAddress;		// Holds address of otp_enc_d process plus settings
 	struct hostent* serverHostInfo;			// Holds hostname from args
@@ -128,8 +137,9 @@ int main(int argc, char *argv[]) {
 			}
 		}
 	}
-
-	// If stdout redirection
+	/******************************
+	** If stdout redirection
+	*******************************/
 	if (isRd == TRUE) {
 		// Open outFile from argv
 		outFile = open(argv[isRdIdx], O_WRONLY | O_TRUNC | O_CREAT, 0644);
@@ -142,40 +152,35 @@ int main(int argc, char *argv[]) {
 			error("open error", 1);
 		}
 	}
-	// Open Plain Text Stdin Files
-	textF = fopen(argv[1], "r");
+	/******************************
+	** Open Stdin Files
+	*******************************/
+	textF = fopen(argv[1], "r");								// Open cipher text
 	memset(textBuf, '\0', sizeof(textBuf)); 		// Clear out the buffer array
 	fgets(textBuf, sizeof(textBuf) - 1, textF); // Get input from the user, trunc to buffer - 1 chars, leaving \0
-	//textBuf[strcspn(textBuf, "\n")] = '\0'; 		// Remove the trailing \n that fgets adds
-	textSize = strlen(textBuf);
+	textSize = strlen(textBuf);									// Set textSize for receiving decrypted text
 
 	// Open Key Stdin File
 	keyF = fopen(argv[2], "r");
 	memset(keyBuf, '\0', sizeof(keyBuf)); 		// Clear out the buffer array
 	fgets(keyBuf, sizeof(keyBuf) - 1, keyF); 	// Get input from the user, trunc to buffer - 1 chars, leaving \0
-	//keyBuf[strcspn(keyBuf, "\n")] = '\0'; 	// Remove the trailing \n that fgets adds
 
-	// printf("key char length: %lu\n", strlen(keyBuf));
-	// printf("tex char length: %lu\n", strlen(textBuf));
+	/******************************
+	** Set Size buffers for key & text
+	*******************************/
+	memset(kSizeBuf, '\0', sizeof(kSizeBuf)); 	// Clear out the buffer array
+	sprintf(kSizeBuf, "%lu", strlen(keyBuf));		// Copy size to string
 
-	memset(kSizeBuf, '\0', sizeof(kSizeBuf)); 				// Clear out the buffer array
-	sprintf(kSizeBuf, "%lu", strlen(keyBuf));
-
-	memset(tSizeBuf, '\0', sizeof(tSizeBuf)); 				// Clear out the buffer array
-	sprintf(tSizeBuf, "%lu", strlen(textBuf));
-
-	// printf("kSizeBuf: %s\n", kSizeBuf);
-	// printf("tSizeBuf: %s\n", tSizeBuf);
+	memset(tSizeBuf, '\0', sizeof(tSizeBuf)); 	// Clear out the buffer array
+	sprintf(tSizeBuf, "%lu", strlen(textBuf));	// Copy size to string
 
 	if (strlen(keyBuf) < (strlen(textBuf) + 1)) {
 		error("Error: key is too short", 1);
 	}
-	// Get size of key + text file
-	// memset(ktBuf, '\0', sizeof(ktBuf));					// Clear out the buffer array
-	// ktSize = strlen(keyBuf) + strlen(textBuf);	// Get size of key & text buffer
-	// sprintf(ktBuf, "%ld", ktSize);							// Copy long value to key-text buffer
-	// ktBuf[ktSize - 1] = '\n';										// Set Last Char to newline for server to catch
 
+	/******************************
+	** Initialize Connection vars
+	*******************************/
 	memset((char*)&serverAddress, '\0', sizeof(serverAddress)); // Clear out the address struct
 	portNumber = atoi(argv[3]); 									// Get the port number, convert to an integer
 	serverHostInfo = gethostbyname("localhost"); 	// Convert the machine name into a type of address
@@ -215,36 +220,30 @@ int main(int argc, char *argv[]) {
 	charsWritten = sendMsg(socketFD, encStr, 0);				// Send confirmation process to daemon
 	memset(buffer, '\0', sizeof(buffer)); 							// Clear out the buffer again for reuse
 	charsRead = recvMsg(socketFD, buffer, CHARMAX, 0);	// Receive confirmation process from daemon
-	//buffer[strcspn(buffer, "\n")] = '\0';
-	// printf("CLIENT: recv: %s", buffer);
-	// printf("CLIENT: encd: %s", encStr);
-	if (strcmp(buffer, encStr) != 0) {							// If process is otp_enc_d & not otp_dec_d
+	if (strcmp(buffer, encStr) != 0) {									// If process is otp_dec_d & not otp_enc_d
 		error("Cannot access otp_enc_d on port", 1);
 		return 1;
 	}
 
-	charsWritten = sendMsg(socketFD, kSizeBuf, 0);				// Send key size to otp_enc_d
+	charsWritten = sendMsg(socketFD, kSizeBuf, 0);			// Send key size to otp_dec_d
 	memset(buffer, '\0', sizeof(buffer)); 							// Clear out the buffer again for reuse
 	charsRead = recvMsg(socketFD, buffer, CHARMAX, 0);	// Receive confirmation from otp_enc_d
-	//buffer[strcspn(buffer, "\n")] = '\0';
 	if (strcmp(buffer, encStr) != 0) {									// Check confirmation
 		error("Cannot access otp_enc_d on port", 1);
 		return 1;
 	}
 
-	charsWritten = sendMsg(socketFD, keyBuf, 0);				// Send key to otp_enc_d
+	charsWritten = sendMsg(socketFD, keyBuf, 0);				// Send key to otp_dec_d
 	memset(buffer, '\0', sizeof(buffer)); 							// Clear out the buffer again for reuse
 	charsRead = recvMsg(socketFD, buffer, CHARMAX, 0);	// Receive confirmation from otp_enc_d
-	//buffer[strcspn(buffer, "\n")] = '\0';
 	if (strcmp(buffer, encStr) != 0) {									// Check confirmation
 		error("Cannot access otp_enc_d on port", 1);
 		return 1;
 	}
 
-	charsWritten = sendMsg(socketFD, tSizeBuf, 0);				// Send text size to otp_enc_d
+	charsWritten = sendMsg(socketFD, tSizeBuf, 0);			// Send text size to otp_dec_d
 	memset(buffer, '\0', sizeof(buffer)); 							// Clear out the buffer again for reuse
 	charsRead = recvMsg(socketFD, buffer, CHARMAX, 0);	// Receive confirmation from otp_enc_d
-	//buffer[strcspn(buffer, "\n")] = '\0';
 	if (strcmp(buffer, encStr) != 0) {									// Check confirmation
 		error("Cannot access otp_enc_d on port", 1);
 		return 1;
@@ -252,7 +251,6 @@ int main(int argc, char *argv[]) {
 
 	charsWritten = sendMsg(socketFD, textBuf, 0);				// Send text to otp_enc_d
 	memset(buffer, '\0', sizeof(buffer)); 							// Clear out the buffer again for reuse
-	// printf("before receive cipher, textSize = %d\n", textSize);
 	charsRead = recvMsgChar(socketFD, buffer, CHARMAX, textSize - 1, 0); 	// Receive ciphertext from otp_enc_d
 
 	printf("%s\n", buffer);
