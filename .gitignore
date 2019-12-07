@@ -23,3 +23,7 @@ program3/reedz_smallsh/smallsh.c
 program4/otp_enc_d
 program4/otp_enc
 program4/keyfile
+program4/ciphertext.txt
+program4/myciphertext.txt
+program4/otp_dec_d
+program4/otp_dec
