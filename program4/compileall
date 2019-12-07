@@ -1,12 +1,12 @@
 !#/bin/bash
-# gcc -o keygen.c keygen
-# gcc -o otp_enc.c otp_enc
-# gcc -o otp_enc_d.c otp_enc_d
-# gcc -o otp_dec.c otp_dec
-# gcc -o otp_dec_d.c otp_dec_d
+gcc -o keygen.c keygen
+gcc -o otp_enc.c otp_enc
+gcc -o otp_enc_d.c otp_enc_d
+gcc -o otp_dec.c otp_dec
+gcc -o otp_dec_d.c otp_dec_d
 
-gcc keygen.c -o keygen
-gcc otp_enc.c -o otp_enc
-gcc otp_enc_d.c -o otp_enc_d
-gcc otp_dec.c -o otp_dec
-gcc otp_dec_d.c -o otp_dec_d
+# gcc keygen.c -o keygen
+# gcc otp_enc.c -o otp_enc
+# gcc otp_enc_d.c -o otp_enc_d
+# gcc otp_dec.c -o otp_dec
+# gcc otp_dec_d.c -o otp_dec_d
